@@ -1,7 +1,7 @@
 [project]
 name = "nordpy"
 version = "0.1.0"
-description = "Add your description here"
+description = "Interactive TUI for browsing and exporting Nordnet financial data"
 readme = "README.md"
 authors = [
     { name = "Kilian Tscherny", email = "90620239+kiliantscherny@users.noreply.github.com" }
@@ -9,17 +9,36 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "beautifulsoup4>=4.14.3",
+    "duckdb>=1.2.0",
     "lxml>=6.0.2",
+    "openpyxl>=3.1.5",
     "paddleocr>=3.4.0",
     "paddlepaddle>=3.3.0",
     "pycryptodome>=3.23.0",
+    "pydantic>=2.11.0",
     "pyjwt>=2.11.0",
     "qrcode>=8.2",
     "requests>=2.32.5",
+    "textual>=3.1.0",
 ]
 
 [project.scripts]
-nordpy = "nordpy:main"
+nordpy = "nordpy.app:main"
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.4.0",
+    "freezegun>=1.4.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "responses>=0.25.0",
+    "textual-dev>=1.7.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short -q"
 
 [build-system]
 requires = ["uv_build>=0.9.26,<0.10.0"]
