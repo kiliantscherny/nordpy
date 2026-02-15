@@ -15,15 +15,16 @@ from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from nordpy.BrowserClient.Helpers import get_authentication_code
+from nordpy.http import HttpSession
 from nordpy.session import SessionManager
 
 
 def _cookies_to_dict(session: object) -> dict[str, str]:
     """Safely convert session cookies to a dict for logging.
 
-    Supports both ``requests.Session`` and ``curl_cffi.requests.Session``.
+    Supports both ``HttpSession`` and ``curl_cffi.HttpSession``.
     """
-    cookies = session.cookies  # type: ignore[union-attr]
+    cookies = session.cookies
     # curl_cffi: iterate via .jar for full Cookie objects; fallback to dict()
     if hasattr(cookies, "jar"):
         return {c.name: c.value or "" for c in cookies.jar}
@@ -42,7 +43,7 @@ class AuthManager:
     """Orchestrates MitID authentication, adapted from the original nordnet.py flow."""
 
     def __init__(
-        self, session: requests.Session, session_manager: SessionManager
+        self, session: HttpSession, session_manager: SessionManager
     ) -> None:
         self.session = session
         self.session_manager = session_manager
@@ -76,7 +77,7 @@ class AuthManager:
 
     @staticmethod
     def _follow_redirects_to_code(
-        session: requests.Session,
+        session: HttpSession,
         response: requests.Response,
         *,
         max_hops: int = 15,
@@ -121,7 +122,7 @@ class AuthManager:
                 continue
 
             # ── Check if this is a loaded page with code in URL ──
-            page_parsed = urlparse(response.url)
+            page_parsed = urlparse(str(response.url))
             page_qs = parse_qs(page_parsed.query)
             if "code" in page_qs:
                 logger.warning(
@@ -186,7 +187,7 @@ class AuthManager:
 
     def _do_full_login(
         self,
-        session: requests.Session,
+        session: HttpSession,
         method: str,
         user_id: str,
         password: str | None,
@@ -223,7 +224,7 @@ class AuthManager:
         logger.debug("Step 0: page data-csrf={}", page_csrf_token)
 
         # Set cookies normally created by client-side JavaScript.
-        # The browser has these but requests.Session doesn't (no JS engine).
+        # The browser has these but HttpSession doesn't (no JS engine).
         # consent_cookie must include all categories — the browser JS sets all
         # four: analytics, functional, marketing, necessary.
         session.cookies.set(
@@ -486,7 +487,7 @@ class AuthManager:
         session.headers["dnt"] = "1"
         logger.debug(
             "Step 9: _csrf cookie={}",
-            {c.name: c.value for c in (getattr(session.cookies, "jar", None) or session.cookies) if c.name == "_csrf"},
+            _cookies_to_dict(session),
         )
 
         body_bytes = json.dumps(payload_json, separators=(",", ":"))

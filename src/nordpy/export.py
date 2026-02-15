@@ -23,17 +23,56 @@ def _timestamp() -> str:
 
 
 def _model_to_flat_dict(item: BaseModel) -> dict[str, Any]:
-    """Flatten a Pydantic model to a dict suitable for tabular export."""
+    """Flatten a Pydantic model to a dict suitable for tabular export.
+
+    For nested BaseModel fields that are None, expands them to sub-fields
+    based on the field's annotation to ensure consistent column structure.
+    """
     result: dict[str, Any] = {}
+    model_fields = type(item).model_fields
+
     for field_name, value in item:
         if isinstance(value, BaseModel):
+            # Nested model with a value - expand its fields
             for sub_name, sub_value in value:
                 result[f"{field_name}_{sub_name}"] = sub_value
+        elif value is None and field_name in model_fields:
+            # Check if this None field is supposed to be a nested model
+            field_info = model_fields[field_name]
+            annotation = field_info.annotation
+            # Handle Optional[SomeModel] by extracting the inner type
+            nested_type = _get_nested_model_type(annotation)
+            if nested_type is not None:
+                # Expand None to sub-fields with None values
+                for sub_field_name in nested_type.model_fields:
+                    result[f"{field_name}_{sub_field_name}"] = None
+            else:
+                result[field_name] = value
         elif isinstance(value, date):
             result[field_name] = value.isoformat()
         else:
             result[field_name] = value
     return result
+
+
+def _get_nested_model_type(annotation: Any) -> type[BaseModel] | None:
+    """Extract a BaseModel type from an annotation like Optional[MoneyAmount]."""
+    import types
+    from typing import Union, get_args, get_origin
+
+    origin = get_origin(annotation)
+
+    # Handle Union types (e.g., MoneyAmount | None or Optional[MoneyAmount])
+    if origin is Union or origin is types.UnionType:
+        for arg in get_args(annotation):
+            if isinstance(arg, type) and issubclass(arg, BaseModel):
+                return arg
+
+    # Handle direct BaseModel subclass
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+
+    return None
 
 
 def _get_headers(data: Sequence[BaseModel]) -> list[str]:

@@ -105,3 +105,5 @@ This project is licensed under the [MIT License](LICENSE).
 ## Acknowledgments
 
 This project includes code from [MitID-BrowserClient](https://github.com/Hundter/MitID-BrowserClient) by Hundter, licensed under the MIT License.
+
+Credit also to [Morten Helmstedt](https://helmstedt.dk/2025/03/hent-dine-nordnet-transaktioner-med-mitid/) for the groundwork of looking into this.

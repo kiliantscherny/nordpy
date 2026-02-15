@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import threading
 
-import requests
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Center, Horizontal, VerticalScroll
@@ -21,17 +20,18 @@ from textual.widgets import (
 from textual.worker import get_current_worker
 
 from nordpy.auth import AuthError, AuthManager
+from nordpy.http import HttpSession
 from nordpy.session import SessionManager
 
 
-class AuthScreen(Screen[requests.Session | None]):
+class AuthScreen(Screen[HttpSession | None]):
     """MitID authentication screen. Dismisses with the session on success."""
 
     BINDINGS = [("escape", "cancel", "Cancel")]
 
     def __init__(
         self,
-        session: requests.Session,
+        session: HttpSession,
         session_manager: SessionManager,
         *,
         user: str,
@@ -111,6 +111,18 @@ class AuthScreen(Screen[requests.Session | None]):
         def update_status(msg: str) -> None:
             if not worker.is_cancelled:
                 self.app.call_from_thread(status_label.update, msg)
+                # Hide QR display and loading indicator once MitID auth completes
+                if "MitID authentication successful" in msg:
+
+                    def _hide_mitid_ui() -> None:
+                        qr_widget.display = False
+                        self.query_one("#auth-loading", LoadingIndicator).display = False
+                        try:
+                            self.query_one("#app-instructions", Static).display = False
+                        except Exception:
+                            pass
+
+                    self.app.call_from_thread(_hide_mitid_ui)
 
         def update_qr(matrix: list[list[bool]]) -> None:
             if not worker.is_cancelled:

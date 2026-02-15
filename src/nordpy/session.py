@@ -9,6 +9,9 @@ from datetime import datetime
 from pathlib import Path
 
 import requests
+from loguru import logger
+
+from nordpy.http import HttpSession
 
 SESSION_FILE = ".nordnet_session.json"
 
@@ -35,19 +38,25 @@ class SessionManager:
         remaining = (expiry - datetime.now()).total_seconds()
         return max(0, int(remaining))
 
-    def save(self, session: requests.Session) -> None:
+    def save(self, session: HttpSession) -> None:
         """Persist session cookies and headers to disk with restricted permissions."""
         now = datetime.now()
         self.authenticated_at = now
+        # Support both requests.Session and curl_cffi.requests.Session cookies
+        jar = getattr(session.cookies, "jar", None)
+        if jar is not None:
+            cookies = {c.name: c.value or "" for c in jar}
+        else:
+            cookies = dict(session.cookies)
         session_data = {
-            "cookies": session.cookies.get_dict(),
+            "cookies": cookies,
             "headers": {k: v for k, v in session.headers.items()},
             "saved_at": now.isoformat(),
         }
         self.session_path.write_text(json.dumps(session_data, indent=2))
         os.chmod(self.session_path, stat.S_IRUSR | stat.S_IWUSR)  # 0600
 
-    def load(self, session: requests.Session) -> bool:
+    def load(self, session: HttpSession) -> bool:
         """Load session cookies and headers from disk. Returns True if file existed."""
         if not self.session_path.exists():
             return False
@@ -65,18 +74,23 @@ class SessionManager:
         except (json.JSONDecodeError, KeyError):
             return False
 
-    def validate(self, session: requests.Session) -> bool:
+    def validate(self, session: HttpSession) -> bool:
         """Test if the session is still valid by calling the accounts endpoint."""
         try:
+            logger.debug("Validating session via /api/2/accounts")
             response = session.get("https://www.nordnet.dk/api/2/accounts", timeout=30)
             if response.status_code == 200:
                 data = response.json()
-                return isinstance(data, list) and len(data) > 0
+                valid = isinstance(data, list) and len(data) > 0
+                logger.debug("Session validation: {} (accounts={})", "valid" if valid else "invalid", len(data) if isinstance(data, list) else "N/A")
+                return valid
+            logger.debug("Session validation failed: status={}", response.status_code)
             return False
-        except requests.RequestException:
+        except (requests.RequestException, Exception) as e:
+            logger.debug("Session validation error: {}", e)
             return False
 
-    def load_and_validate(self, session: requests.Session) -> bool:
+    def load_and_validate(self, session: HttpSession) -> bool:
         """Load a saved session and test its validity. Returns True if usable."""
         if not self.load(session):
             return False

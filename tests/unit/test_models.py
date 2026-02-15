@@ -9,11 +9,22 @@ import pytest
 from nordpy.models import (
     Account,
     AccountBalance,
+    AccountInfo,
+    BullBearCertificate,
+    Country,
+    CurrencyLedger,
     Holding,
     Instrument,
+    InstrumentSearchResult,
+    InstrumentType,
+    MainSearchResult,
+    Market,
     MoneyAmount,
+    NewsSource,
     NoteInfo,
     Order,
+    PortfolioValuePoint,
+    StockSearchResult,
     Trade,
     Transaction,
 )
@@ -252,6 +263,7 @@ class TestTransaction:
             "price": "invalid",
         }
         tx = Transaction.model_validate(data)
+        assert tx.price is not None
         assert tx.price.value == 0
 
 
@@ -317,3 +329,223 @@ class TestOrder:
             }
         )
         assert o.price.value == 0
+
+
+# ── CurrencyLedger ──
+
+
+class TestCurrencyLedger:
+    def test_basic_construction(self):
+        ledger = CurrencyLedger.model_validate(
+            {
+                "currency": "DKK",
+                "totalBalance": {"value": 1000.0, "currencyCode": "DKK"},
+                "availableBalance": {"value": 800.0, "currencyCode": "DKK"},
+                "reservedBalance": {"value": 200.0, "currencyCode": "DKK"},
+            }
+        )
+        assert ledger.currency == "DKK"
+        assert ledger.total_balance.value == 1000.0
+        assert ledger.available_balance.value == 800.0
+        assert ledger.reserved_balance.value == 200.0
+
+
+# ── Country ──
+
+
+class TestCountry:
+    def test_field_aliases(self):
+        country = Country.model_validate({"countryCode": "DK", "name": "Denmark"})
+        assert country.country_code == "DK"
+        assert country.name == "Denmark"
+
+
+# ── InstrumentType ──
+
+
+class TestInstrumentType:
+    def test_basic_construction(self):
+        itype = InstrumentType.model_validate(
+            {"typeId": 1, "name": "Stock", "description": "Common stock"}
+        )
+        assert itype.type_id == 1
+        assert itype.name == "Stock"
+
+    def test_type_id_coerced_from_string(self):
+        itype = InstrumentType.model_validate({"typeId": "123", "name": "ETF"})
+        assert itype.type_id == 123
+
+
+# ── Market ──
+
+
+class TestMarket:
+    def test_basic_construction(self):
+        market = Market.model_validate(
+            {
+                "marketId": 1,
+                "name": "OMX Copenhagen",
+                "country": "DK",
+                "currency": "DKK",
+                "isOpen": True,
+            }
+        )
+        assert market.market_id == 1
+        assert market.name == "OMX Copenhagen"
+        assert market.is_open is True
+
+    def test_is_open_default(self):
+        market = Market.model_validate({"marketId": 1, "name": "Test"})
+        assert market.is_open is False
+
+
+# ── NewsSource ──
+
+
+class TestNewsSource:
+    def test_basic_construction(self):
+        source = NewsSource.model_validate(
+            {"sourceId": 1, "name": "Ritzau", "language": "da"}
+        )
+        assert source.source_id == 1
+        assert source.name == "Ritzau"
+        assert source.language == "da"
+
+
+# ── InstrumentSearchResult ──
+
+
+class TestInstrumentSearchResult:
+    def test_basic_construction(self):
+        result = InstrumentSearchResult.model_validate(
+            {
+                "instrumentId": 123,
+                "name": "Apple Inc",
+                "symbol": "AAPL",
+                "isin": "US0378331005",
+                "instrumentType": "Stock",
+                "marketId": 1,
+            }
+        )
+        assert result.instrument_id == 123
+        assert result.symbol == "AAPL"
+
+    def test_last_price_parsing(self):
+        result = InstrumentSearchResult.model_validate(
+            {
+                "instrumentId": 1,
+                "name": "Test",
+                "lastPrice": {"value": 150.0, "currencyCode": "USD"},
+            }
+        )
+        assert result.last_price is not None
+        assert result.last_price.value == 150.0
+
+
+# ── BullBearCertificate ──
+
+
+class TestBullBearCertificate:
+    def test_extends_search_result(self):
+        cert = BullBearCertificate.model_validate(
+            {
+                "instrumentId": 456,
+                "name": "BULL AAPL X5",
+                "leverage": 5.0,
+                "direction": "BULL",
+                "underlyingName": "Apple",
+                "barrier": 100.0,
+            }
+        )
+        assert cert.instrument_id == 456
+        assert cert.leverage == 5.0
+        assert cert.direction == "BULL"
+
+
+# ── StockSearchResult ──
+
+
+class TestStockSearchResult:
+    def test_extends_search_result(self):
+        stock = StockSearchResult.model_validate(
+            {
+                "instrumentId": 789,
+                "name": "Novo Nordisk",
+                "sector": "Healthcare",
+                "dividendYield": 1.5,
+            }
+        )
+        assert stock.instrument_id == 789
+        assert stock.sector == "Healthcare"
+        assert stock.dividend_yield == 1.5
+
+
+# ── MainSearchResult ──
+
+
+class TestMainSearchResult:
+    def test_basic_construction(self):
+        result = MainSearchResult.model_validate(
+            {
+                "category": "instrument",
+                "instrumentId": 123,
+                "name": "Apple",
+                "symbol": "AAPL",
+            }
+        )
+        assert result.category == "instrument"
+        assert result.instrument_id == 123
+
+    def test_instrument_id_none(self):
+        result = MainSearchResult.model_validate(
+            {"category": "news", "name": "Market Update"}
+        )
+        assert result.instrument_id is None
+
+
+# ── AccountInfo ──
+
+
+class TestAccountInfo:
+    def test_from_info_response_dict(self):
+        data = {
+            "account_sum": {"value": 50000.0, "currencyCode": "DKK"},
+            "own_capital": {"value": 45000.0, "currencyCode": "DKK"},
+            "buying_power": {"value": 10000.0, "currencyCode": "DKK"},
+        }
+        info = AccountInfo.from_info_response(1, data)
+        assert info.accid == 1
+        assert info.account_sum.value == 50000.0
+        assert info.own_capital is not None
+        assert info.own_capital.value == 45000.0
+
+    def test_from_info_response_list(self):
+        data = [{"account_sum": {"value": 25000.0}}]
+        info = AccountInfo.from_info_response(2, data)
+        assert info.accid == 2
+        assert info.account_sum.value == 25000.0
+
+
+# ── PortfolioValuePoint ──
+
+
+class TestPortfolioValuePoint:
+    def test_basic_construction(self):
+        point = PortfolioValuePoint(
+            date=date(2024, 1, 15),
+            value=10000.0,
+            currency="DKK",
+            cash_balance=5000.0,
+            holdings_value=5000.0,
+        )
+        assert point.date == date(2024, 1, 15)
+        assert point.value == 10000.0
+        assert point.cash_balance == 5000.0
+        assert point.holdings_value == 5000.0
+
+    def test_optional_breakdown_fields(self):
+        point = PortfolioValuePoint(
+            date=date(2024, 1, 1), value=1000.0, currency="DKK"
+        )
+        assert point.cash_balance is None
+        assert point.holdings_value is None

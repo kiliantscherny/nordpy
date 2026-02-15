@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import requests
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
 from textual.widgets import Footer, Header, TabbedContent, TabPane
 
 from nordpy.client import NordnetClient
+from nordpy.http import HttpSession
 from nordpy.models import Account
 from nordpy.screens.holdings import HoldingsPane
 from nordpy.screens.trades import OrdersPane, TradesPane
@@ -29,7 +29,7 @@ class AccountDetailScreen(Screen):
     def __init__(
         self,
         *,
-        session: requests.Session,
+        session: HttpSession,
         client: NordnetClient,
         account: Account,
     ) -> None:

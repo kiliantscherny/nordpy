@@ -81,6 +81,7 @@ def test_load_restores_authenticated_at(tmp_path, mock_session):
     sm2 = SessionManager(session_path=path)
     sm2.load(requests.Session())
     assert sm2.authenticated_at is not None
+    assert saved_at is not None
     assert sm2.authenticated_at.isoformat() == saved_at.isoformat()
 
 

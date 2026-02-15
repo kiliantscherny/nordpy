@@ -131,3 +131,66 @@ TabPane {
     height: 1fr;
     padding: 0;
 }
+
+/* Chart pane styling */
+#chart-controls {
+    dock: top;
+    height: auto;
+    padding: 1;
+    background: $panel;
+}
+
+#chart-controls Select {
+    width: 20;
+}
+
+#portfolio-chart {
+    height: 1fr;
+    min-height: 15;
+}
+
+#chart-status {
+    dock: bottom;
+    height: auto;
+    text-align: center;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+/* Hint text */
+.hint-text {
+    dock: bottom;
+    height: auto;
+    text-align: center;
+    color: $text-muted;
+    text-style: italic;
+    padding: 0 1;
+}
+
+/* Filter bars for all panes */
+#holdings-filter-bar,
+#trades-filter-bar,
+#orders-filter-bar {
+    dock: top;
+    height: auto;
+    min-height: 3;
+    padding: 1;
+    background: $panel;
+    layout: horizontal;
+}
+
+#holdings-filter-bar Input,
+#trades-filter-bar Input,
+#orders-filter-bar Input {
+    width: 1fr;
+    min-width: 20;
+}
+
+/* Status text */
+#holdings-status {
+    dock: bottom;
+    height: auto;
+    text-align: center;
+    color: $text-muted;
+    padding: 0 1;
+}

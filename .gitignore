@@ -2,6 +2,9 @@
 .nordnet_session.json
 exports/
 
+# Logs
+*.log
+
 # Spec Kit
 specs/
 .specify/

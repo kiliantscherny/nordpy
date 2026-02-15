@@ -65,6 +65,45 @@ class TestModelToFlatDict:
         flat = _model_to_flat_dict(tx)
         assert flat["accounting_date"] == "2024-06-15"
 
+    def test_optional_nested_model_none_expands_to_subfields(self):
+        """When an optional nested model is None, it should expand to sub-fields with None values.
+
+        This prevents row length mismatches when some rows have the nested model
+        and others don't.
+        """
+        tx_with_price = Transaction.model_validate(
+            {
+                "transactionId": "tx-1",
+                "accountingDate": "2024-06-15",
+                "transactionTypeName": "BUY",
+                "amount": {"value": -100.0},
+                "price": {"value": 50.0, "currencyCode": "USD"},
+            }
+        )
+        tx_without_price = Transaction.model_validate(
+            {
+                "transactionId": "tx-2",
+                "accountingDate": "2024-06-16",
+                "transactionTypeName": "DIVIDEND",
+                "amount": {"value": 25.0},
+                # price is None by default
+            }
+        )
+
+        flat_with = _model_to_flat_dict(tx_with_price)
+        flat_without = _model_to_flat_dict(tx_without_price)
+
+        # Both should have the same keys
+        assert set(flat_with.keys()) == set(flat_without.keys())
+
+        # The one with price should have actual values
+        assert flat_with["price_value"] == 50.0
+        assert flat_with["price_currency"] == "USD"
+
+        # The one without price should have None for sub-fields
+        assert flat_without["price_value"] is None
+        assert flat_without["price_currency"] is None
+
 
 # ── _get_headers / _get_rows ──
 
@@ -243,6 +282,7 @@ class TestExportDuckDB:
 
         con = duckdb.connect(str(path))
         result = con.execute("SELECT COUNT(*) FROM accounts").fetchone()
+        assert result is not None
         assert result[0] == 2
 
         cols = con.execute("DESCRIBE accounts").fetchall()
@@ -261,3 +301,60 @@ class TestExportDuckDB:
 
         with pytest.raises(duckdb.ParserException):
             export_duckdb([], "empty")
+
+    def test_mixed_optional_nested_models(self, tmp_path, monkeypatch):
+        """DuckDB export handles rows with mix of None and non-None nested models.
+
+        Regression test: previously rows with None nested models had fewer columns
+        than rows with actual nested model values, causing 'Values were not provided
+        for prepared statement parameters' errors.
+        """
+        import duckdb
+
+        import nordpy.export as export_mod
+
+        monkeypatch.setattr(export_mod, "EXPORT_DIR", tmp_path)
+
+        # First transaction has price, second doesn't
+        data = [
+            Transaction.model_validate(
+                {
+                    "transactionId": "tx-1",
+                    "accountingDate": "2024-06-15",
+                    "transactionTypeName": "BUY",
+                    "amount": {"value": -100.0},
+                    "price": {"value": 50.0, "currencyCode": "USD"},
+                }
+            ),
+            Transaction.model_validate(
+                {
+                    "transactionId": "tx-2",
+                    "accountingDate": "2024-06-16",
+                    "transactionTypeName": "DIVIDEND",
+                    "amount": {"value": 25.0},
+                    # price is None
+                }
+            ),
+            Transaction.model_validate(
+                {
+                    "transactionId": "tx-3",
+                    "accountingDate": "2024-06-17",
+                    "transactionTypeName": "SELL",
+                    "amount": {"value": 200.0},
+                    "price": {"value": 55.0, "currencyCode": "USD"},
+                }
+            ),
+        ]
+
+        # This should not raise an error
+        path = export_duckdb(data, "transactions")
+
+        con = duckdb.connect(str(path))
+        result = con.execute("SELECT COUNT(*) FROM transactions").fetchone()
+        assert result is not None
+        assert result[0] == 3
+
+        # Verify all rows are present
+        rows = con.execute("SELECT * FROM transactions").fetchall()
+        assert len(rows) == 3
+        con.close()

@@ -7,9 +7,24 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-import requests
-
-from nordpy.models import Account, AccountBalance, Holding, Order, Trade, Transaction
+from nordpy.http import HttpSession
+from nordpy.models import (
+    Account,
+    AccountBalance,
+    AccountInfo,
+    BullBearCertificate,
+    Country,
+    CurrencyLedger,
+    Holding,
+    InstrumentType,
+    MainSearchResult,
+    Market,
+    NewsSource,
+    Order,
+    StockSearchResult,
+    Trade,
+    Transaction,
+)
 
 
 class NordnetAPIError(Exception):
@@ -28,7 +43,7 @@ class NordnetClient:
     TX_API_URL = "https://api.prod.nntech.io"
     DEFAULT_TIMEOUT = 30
 
-    def __init__(self, session: requests.Session) -> None:
+    def __init__(self, session: HttpSession) -> None:
         self.session = session
         self._bearer_token: str | None = None
         self._token_expiry: datetime | None = None
@@ -220,3 +235,91 @@ class NordnetClient:
             offset += limit
 
         return all_transactions
+
+    # ── Ledger methods ──
+
+    def get_ledgers(self, accid: int) -> list[CurrencyLedger]:
+        """Fetch currency ledger balances for an account."""
+        data = self._get(f"/api/2/accounts/{accid}/ledgers")
+        return [CurrencyLedger.model_validate(item) for item in data]
+
+    # ── Enhanced account info ──
+
+    def get_account_info(self, accid: int) -> AccountInfo:
+        """Fetch extended account information."""
+        data = self._get(f"/api/2/accounts/{accid}/info")
+        return AccountInfo.from_info_response(accid, data)
+
+    # ── Reference data methods ──
+
+    def get_countries(self) -> list[Country]:
+        """Fetch all available countries."""
+        data = self._get("/api/2/countries")
+        return [Country.model_validate(item) for item in data]
+
+    def get_instrument_types(self) -> list[InstrumentType]:
+        """Fetch all instrument types."""
+        data = self._get("/api/2/instruments/types")
+        return [InstrumentType.model_validate(item) for item in data]
+
+    def get_markets(self) -> list[Market]:
+        """Fetch all available markets."""
+        data = self._get("/api/2/markets")
+        return [Market.model_validate(item) for item in data]
+
+    def get_news_sources(self) -> list[NewsSource]:
+        """Fetch all news sources."""
+        data = self._get("/api/2/news_sources")
+        return [NewsSource.model_validate(item) for item in data]
+
+    # ── Search methods ──
+
+    def search_bull_bear(
+        self,
+        *,
+        query: str | None = None,
+        underlying: str | None = None,
+        direction: str | None = None,
+        limit: int = 50,
+    ) -> list[BullBearCertificate]:
+        """Search for Bull & Bear certificates."""
+        params: dict[str, str | int] = {"limit": limit}
+        if query:
+            params["query"] = query
+        if underlying:
+            params["underlying"] = underlying
+        if direction:
+            params["direction"] = direction
+
+        query_str = "&".join(f"{k}={v}" for k, v in params.items())
+        path = f"/api/2/instrument_search/query/bullbearlist?{query_str}"
+        data = self._get(path)
+        results = data if isinstance(data, list) else data.get("results", [])
+        return [BullBearCertificate.model_validate(item) for item in results]
+
+    def search_stocks(
+        self,
+        *,
+        query: str | None = None,
+        market_id: int | None = None,
+        limit: int = 50,
+    ) -> list[StockSearchResult]:
+        """Search for stocks."""
+        params: dict[str, str | int] = {"limit": limit}
+        if query:
+            params["query"] = query
+        if market_id:
+            params["marketId"] = market_id
+
+        query_str = "&".join(f"{k}={v}" for k, v in params.items())
+        path = f"/api/2/instrument_search/query/stocklist?{query_str}"
+        data = self._get(path)
+        results = data if isinstance(data, list) else data.get("results", [])
+        return [StockSearchResult.model_validate(item) for item in results]
+
+    def main_search(self, query: str, *, limit: int = 20) -> list[MainSearchResult]:
+        """Search Nordnet for instruments, news, etc."""
+        path = f"/api/2/main_search?query={query}&limit={limit}"
+        data = self._get(path)
+        results = data.get("results", data) if isinstance(data, dict) else data
+        return [MainSearchResult.model_validate(item) for item in results]

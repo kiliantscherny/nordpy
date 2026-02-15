@@ -15,7 +15,7 @@ from nordpy.models import Transaction
 
 
 class TransactionsPane(Vertical):
-    """Transaction history DataTable with filter bar."""
+    """Transaction history DataTable with filter bar and sorting."""
 
     def __init__(self, *, client: NordnetClient, accno: str, accid: int) -> None:
         super().__init__()
@@ -24,6 +24,8 @@ class TransactionsPane(Vertical):
         self.accid = accid
         self._all_transactions: list[Transaction] = []
         self._filtered: list[Transaction] = []
+        self._sort_column: str | None = None
+        self._sort_reverse: bool = False
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="filter-bar"):
@@ -38,6 +40,7 @@ class TransactionsPane(Vertical):
             yield Input(placeholder="To (YYYY-MM-DD)", id="filter-to")
         yield DataTable(id="transactions-table", cursor_type="row")
         yield Static("", id="tx-empty", classes="empty-state")
+        yield Static("Click column headers to sort", classes="hint-text")
         yield Static("", id="tx-status")
 
     def on_mount(self) -> None:
@@ -46,6 +49,7 @@ class TransactionsPane(Vertical):
             "Date",
             "Type",
             "Instrument",
+            "ISIN",
             "Qty",
             "Price",
             "Amount",
@@ -134,8 +138,31 @@ class TransactionsPane(Vertical):
         if to_date:
             filtered = [t for t in filtered if t.accounting_date <= to_date]
 
+        # Apply sorting
+        if self._sort_column:
+            filtered = self._sort_transactions(filtered)
+
         self._filtered = filtered
         self._populate_table()
+
+    def _sort_transactions(self, transactions: list[Transaction]) -> list[Transaction]:
+        """Sort transactions by the selected column."""
+        key_funcs = {
+            "Date": lambda t: t.accounting_date,
+            "Type": lambda t: t.transaction_type_name.lower(),
+            "Instrument": lambda t: (t.instrument_name or "").lower(),
+            "ISIN": lambda t: (t.isin_code or "").lower(),
+            "Qty": lambda t: t.quantity or 0,
+            "Price": lambda t: t.price.value if t.price else 0,
+            "Amount": lambda t: t.amount.value,
+            "Currency": lambda t: t.amount.currency.lower(),
+            "Balance": lambda t: t.balance.value if t.balance else 0,
+        }
+
+        key_func = key_funcs.get(self._sort_column)
+        if key_func:
+            return sorted(transactions, key=key_func, reverse=self._sort_reverse)
+        return transactions
 
     def _populate_table(self) -> None:
         """Populate the DataTable with filtered transaction data."""
@@ -167,6 +194,7 @@ class TransactionsPane(Vertical):
                 str(t.accounting_date),
                 t.transaction_type_name,
                 t.instrument_name or "",
+                t.isin_code or "",
                 qty,
                 price,
                 amount,
@@ -186,6 +214,19 @@ class TransactionsPane(Vertical):
 
     @on(Select.Changed, "#filter-type")
     def on_type_changed(self) -> None:
+        self._apply_filters()
+
+    @on(DataTable.HeaderSelected)
+    def on_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Handle column header click for sorting."""
+        column_name = str(event.label)
+
+        if self._sort_column == column_name:
+            self._sort_reverse = not self._sort_reverse
+        else:
+            self._sort_column = column_name
+            self._sort_reverse = False
+
         self._apply_filters()
 
 

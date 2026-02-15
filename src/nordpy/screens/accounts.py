@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import requests
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -11,6 +10,7 @@ from textual.widgets import DataTable, Footer, Header, Static
 from textual.worker import get_current_worker
 
 from nordpy.client import NordnetAPIError, NordnetClient
+from nordpy.http import HttpSession
 from nordpy.models import Account, AccountBalance
 
 
@@ -25,7 +25,7 @@ class AccountsScreen(Screen):
 
     def __init__(
         self,
-        session: requests.Session,
+        session: HttpSession,
         client: NordnetClient,
     ) -> None:
         super().__init__()

@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import sys
 
-import requests
+from loguru import logger
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.widgets import Footer, Header, LoadingIndicator
 
 from nordpy.client import NordnetClient
+from nordpy.http import create_session
 from nordpy.session import SessionManager
 
 
@@ -43,11 +45,7 @@ class NordpyApp(App):
         self.proxy = proxy
         self.force_login = force_login
 
-        self.http_session = requests.Session()
-        if proxy:
-            self.http_session.proxies.update(
-                {"http": f"socks5://{proxy}", "https": f"socks5://{proxy}"}
-            )
+        self.http_session = create_session(proxy=proxy)
 
         self.session_manager = SessionManager()
         self.api_client = NordnetClient(self.http_session)
@@ -144,6 +142,26 @@ class NordpyApp(App):
             screen.action_refresh()
 
 
+def _configure_logging(verbose: bool = False) -> None:
+    """Set up loguru to write to nordpy.log (and stderr if verbose)."""
+    from pathlib import Path
+
+    log_path = Path(__file__).resolve().parent.parent.parent / "nordpy.log"
+    logger.remove()  # Remove default stderr handler
+    logger.add(
+        str(log_path),
+        rotation="5 MB",
+        retention="3 days",
+        level="DEBUG",
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} | {message}",
+    )
+    if verbose:
+        logger.add(sys.stderr, level="DEBUG")
+    logger.info("nordpy started — logging to {}", log_path)
+    # Also print so the user can find it even if Textual swallows stderr
+    print(f"[nordpy] Log file: {log_path}")
+
+
 def main() -> None:
     """CLI entry point — parse args and launch the TUI."""
     parser = argparse.ArgumentParser(description="Nordnet Portfolio TUI")
@@ -166,8 +184,14 @@ def main() -> None:
         choices=["csv", "xlsx", "duckdb"],
         help="Headless export mode (no TUI)",
     )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Also log to stderr",
+    )
 
     args = parser.parse_args()
+    _configure_logging(verbose=args.verbose)
 
     if args.export:
         _run_headless_export(args)
@@ -193,11 +217,7 @@ def _run_headless_export(args: argparse.Namespace) -> None:
     exporters = {"csv": export_csv, "xlsx": export_xlsx, "duckdb": export_duckdb}
     exporter = exporters[args.export]
 
-    session = requests.Session()
-    if args.proxy:
-        session.proxies.update(
-            {"http": f"socks5://{args.proxy}", "https": f"socks5://{args.proxy}"}
-        )
+    session = create_session(proxy=args.proxy)
 
     sm = SessionManager()
     needs_auth = args.force_login or not sm.load_and_validate(session)
