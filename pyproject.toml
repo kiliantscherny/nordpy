@@ -1,6 +1,6 @@
 [project]
 name = "nordpy"
-version = "0.1.0"
+version = "0.2.0"
 description = "Interactive TUI for browsing and exporting Nordnet financial data"
 readme = "README.md"
 authors = [
