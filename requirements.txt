@@ -22,6 +22,8 @@ anyio==4.12.1
     # via httpx
 argcomplete==3.6.3
     # via commitizen
+async-timeout==5.0.1 ; python_full_version < '3.11'
+    # via aiohttp
 attrs==25.4.0
     # via aiohttp
 bce-python-sdk==0.9.60
@@ -30,6 +32,8 @@ beautifulsoup4==4.14.3
     # via
     #   nordpy
     #   yfinance
+cachetools==7.0.1
+    # via tox
 certifi==2026.1.4
     # via
     #   curl-cffi
@@ -39,7 +43,9 @@ certifi==2026.1.4
 cffi==2.0.0
     # via curl-cffi
 chardet==5.2.0
-    # via paddlex
+    # via
+    #   paddlex
+    #   tox
 charset-normalizer==3.4.4
     # via
     #   commitizen
@@ -57,6 +63,7 @@ colorama==0.4.6
     #   loguru
     #   pytest
     #   qrcode
+    #   tox
     #   tqdm
 colorlog==6.10.1
     # via paddlex
@@ -71,15 +78,23 @@ decli==0.6.3
     # via commitizen
 deprecated==1.3.1
     # via commitizen
+distlib==0.4.0
+    # via virtualenv
 duckdb==1.4.4
     # via nordpy
 et-xmlfile==2.0.0
     # via openpyxl
-filelock==3.20.3
+exceptiongroup==1.3.1 ; python_full_version < '3.11'
+    # via
+    #   anyio
+    #   pytest
+filelock==3.24.2
     # via
     #   huggingface-hub
     #   modelscope
     #   paddlex
+    #   tox
+    #   virtualenv
 freezegun==1.5.5
 frozendict==2.4.7
     # via yfinance
@@ -145,9 +160,20 @@ multidict==6.7.1
     #   yarl
 multitasking==0.0.12
     # via yfinance
-networkx==3.6.1
+networkx==3.4.2 ; python_full_version < '3.11'
     # via paddlepaddle
-numpy==2.4.2
+networkx==3.6.1 ; python_full_version >= '3.11'
+    # via paddlepaddle
+numpy==2.2.6 ; python_full_version < '3.11'
+    # via
+    #   opencv-contrib-python
+    #   opt-einsum
+    #   paddlepaddle
+    #   paddlex
+    #   pandas
+    #   shapely
+    #   yfinance
+numpy==2.4.2 ; python_full_version >= '3.11'
     # via
     #   opencv-contrib-python
     #   opt-einsum
@@ -167,14 +193,21 @@ packaging==26.0
     #   commitizen
     #   huggingface-hub
     #   paddlex
+    #   pyproject-api
     #   pytest
+    #   tox
+    #   tox-uv
 paddleocr==3.4.0
     # via nordpy
 paddlepaddle==3.3.0
     # via nordpy
 paddlex==3.4.1
     # via paddleocr
-pandas==3.0.0
+pandas==2.3.3 ; python_full_version < '3.11'
+    # via
+    #   paddlex
+    #   yfinance
+pandas==3.0.0 ; python_full_version >= '3.11'
     # via
     #   paddlex
     #   yfinance
@@ -186,9 +219,11 @@ pillow==12.1.0
     # via
     #   paddlepaddle
     #   paddlex
-platformdirs==4.5.1
+platformdirs==4.9.2
     # via
     #   textual
+    #   tox
+    #   virtualenv
     #   yfinance
 plotext==5.3.2
     # via textual-plotext
@@ -196,6 +231,7 @@ pluggy==1.6.0
     # via
     #   pytest
     #   pytest-cov
+    #   tox
 prettytable==3.17.0
     # via
     #   aistudio-sdk
@@ -239,6 +275,8 @@ pyjwt==2.11.0
     # via nordpy
 pypdfium2==5.4.0
     # via paddlex
+pyproject-api==1.10.0
+    # via tox
 pytest==9.0.2
     # via
     #   pytest-cov
@@ -253,7 +291,9 @@ python-dateutil==2.9.0.post0
     #   pandas
     #   pendulum
 pytz==2025.2
-    # via yfinance
+    # via
+    #   pandas
+    #   yfinance
 pyyaml==6.0.2
     # via
     #   commitizen
@@ -313,8 +353,18 @@ textual-plotext==1.0.1
     # via nordpy
 textual-serve==1.1.3
     # via textual-dev
+tomli==2.4.0 ; python_full_version <= '3.11'
+    # via
+    #   coverage
+    #   pyproject-api
+    #   pytest
+    #   tox
+    #   tox-uv
 tomlkit==0.14.0
     # via commitizen
+tox==4.36.1
+    # via tox-uv
+tox-uv==1.29.0
 tqdm==4.67.3
     # via
     #   aistudio-sdk
@@ -324,8 +374,13 @@ typer-slim==0.21.2
     # via huggingface-hub
 typing-extensions==4.15.0
     # via
+    #   aiosignal
+    #   anyio
     #   beautifulsoup4
+    #   commitizen
+    #   exceptiongroup
     #   huggingface-hub
+    #   multidict
     #   paddleocr
     #   paddlepaddle
     #   paddlex
@@ -333,7 +388,9 @@ typing-extensions==4.15.0
     #   pydantic-core
     #   textual
     #   textual-dev
+    #   tox
     #   typing-inspection
+    #   virtualenv
 typing-inspection==0.4.2
     # via pydantic
 tzdata==2025.3
@@ -349,6 +406,10 @@ urllib3==2.6.3
     #   modelscope
     #   requests
     #   responses
+uv==0.10.3
+    # via tox-uv
+virtualenv==20.37.0
+    # via tox
 wcwidth==0.6.0
     # via
     #   prettytable

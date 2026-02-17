@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Kilian Tscherny", email = "90620239+kiliantscherny@users.noreply.github.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "beautifulsoup4>=4.14.3",
     "curl-cffi>=0.7.0",
@@ -39,6 +39,8 @@ dev = [
     "pytest-mock>=3.14.0",
     "responses>=0.25.0",
     "textual-dev>=1.7.0",
+    "tox>=4.36.1",
+    "tox-uv>=1.29.0",
 ]
 
 [tool.commitizen]
