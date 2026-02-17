@@ -1,3 +1,13 @@
+## 1.0.0 (2026-02-17)
+
+### Feat
+
+- major overhaul of tui style and functionality
+
+### Fix
+
+- **ci.yml**: use uvx to run ruff and ty
+
 ## 0.2.0 (2026-02-15)
 
 ### Feat
