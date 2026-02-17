@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing to nordpy. This guide will help you get set up and familiar with the project's workflow.
 
-> [!INFO]
+> [!NOTE]
 > This is a hobby project and I'm still figuring out the best way to structure and manage it. Your feedback and contributions are welcome.
 
 ## Getting Started

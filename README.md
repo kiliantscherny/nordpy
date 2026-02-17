@@ -23,6 +23,8 @@
 > [!CAUTION]
 > **Disclaimer** – This tool is provided as-is, with no warranty of any kind. **Use it at your own risk**.
 >
+> This project is not affiliated in any way with Nordnet nor MitID.
+>
 > The author assumes no liability for any loss, damage, or misuse arising from the use of this software. You are solely responsible for securing any exported data and ensuring it is only accessible to you.
 
 ## Features
