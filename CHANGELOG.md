@@ -24,3 +24,17 @@
 
 - **Major-developments-in-the-app-including-creation-of-a-TUI-for-accessing-Nordnet-data,-unit-testing,-and-Pydantic-validation-of-API-responses**: create tui for nordpy
 - initial commit
+
+## v1.0.1 (2026-02-17)
+
+### Feat
+
+- major overhaul of tui style and functionality
+- add portfolio and instrument charts, fix auth, clean up types
+- **Major-developments-in-the-app-including-creation-of-a-TUI-for-accessing-Nordnet-data,-unit-testing,-and-Pydantic-validation-of-API-responses**: create tui for nordpy
+- initial commit
+
+### Fix
+
+- **ci.yml**: use uvx to run ruff and ty
+- uppercase idp field in signicatStart payload
