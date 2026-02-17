@@ -39,7 +39,7 @@ jobs:
         run: uv sync --dev
 
       - name: Ruff check
-        run: uv run ruff check .
+        run: uvx ruff check .
 
       - name: Type check
-        run: uv run ty check
+        run: uvx ty check
