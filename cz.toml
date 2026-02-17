@@ -7,7 +7,7 @@ version_files = [
     "src/__version__.py",
     "pyproject.toml:version"
 ]
-tag_format = "$version"
+tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_file = "CHANGELOG.md"
 changelog_incremental = false
