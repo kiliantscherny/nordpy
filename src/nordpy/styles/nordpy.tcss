@@ -1,7 +1,7 @@
-/* Nordpy global styles */
+/* ── nordpy global styles ─────────────────────────── */
 
 Screen {
-    background: $surface;
+    background: $background;
 }
 
 Header {
@@ -12,62 +12,114 @@ Footer {
     dock: bottom;
 }
 
-/* DataTable styling */
+/* ── DataTable ──────────────────────────────────────── */
+
 DataTable {
     height: 1fr;
 }
 
 DataTable > .datatable--header {
     text-style: bold;
-    background: $accent;
+    background: $primary 15%;
     color: $text;
 }
 
 DataTable > .datatable--cursor {
-    background: $accent;
+    background: $secondary 30%;
     color: $text;
 }
 
 DataTable > .datatable--even-row {
-    background: $surface-darken-1;
+    background: $boost;
 }
 
-/* Filter bar layout */
-#filter-bar {
-    dock: top;
-    height: auto;
-    min-height: 3;
-    padding: 1;
-    background: $panel;
-    layout: horizontal;
-    overflow: hidden auto;
+DataTable > .datatable--hover {
+    background: $primary 8%;
 }
 
-#filter-bar Input {
-    width: 1fr;
-    min-width: 16;
-    margin: 0 1;
-}
+/* ── Account cards ─────────────────────────────────── */
 
-#filter-bar Select {
-    width: 1fr;
-    min-width: 16;
-    margin: 0 1;
-}
-
-/* Loading state */
-LoadingIndicator {
+#accounts-container {
     height: 1fr;
+    padding: 1 2;
 }
 
-/* Auth screen */
+.account-card {
+    height: auto;
+    margin: 0;
+    padding: 0 2;
+    border-bottom: solid $primary 20%;
+    background: $surface;
+}
+
+.account-card:hover {
+    background: $surface-lighten-1;
+}
+
+.account-card:focus {
+    background: $surface-lighten-1;
+    border-bottom: solid $secondary;
+}
+
+.account-card-row {
+    height: 1;
+    width: 100%;
+    align-vertical: middle;
+}
+
+.account-name {
+    width: auto;
+    text-style: bold;
+    color: $text;
+    margin: 0 1 0 0;
+}
+
+.account-number {
+    width: auto;
+    color: $text-muted;
+    margin: 0 1 0 0;
+}
+
+.account-type-badge {
+    width: 1fr;
+    color: $primary;
+}
+
+.metric-value {
+    width: auto;
+    text-style: bold;
+    color: $success;
+    margin: 0 0 0 2;
+}
+
+.metric-secondary {
+    color: $secondary;
+}
+
+/* ── Auth screen ────────────────────────────────────── */
+
 #auth-container {
     align: center middle;
-    width: 80;
+    width: 70;
     max-height: 100%;
     padding: 2 4;
-    border: thick $accent;
-    background: $panel;
+    border: thick $primary 60%;
+    background: $surface;
+}
+
+.auth-title {
+    text-align: center;
+    width: 100%;
+    text-style: bold;
+    color: $primary;
+    margin: 1 0;
+}
+
+.auth-info {
+    text-align: center;
+    width: 100%;
+    color: $text-muted;
+    margin: 0 0;
 }
 
 #auth-container Static {
@@ -93,6 +145,10 @@ LoadingIndicator {
     margin: 1 0;
 }
 
+#auth-status {
+    color: $secondary;
+}
+
 /* CPR input group */
 #cpr-group {
     width: 100%;
@@ -110,7 +166,54 @@ LoadingIndicator {
     min-width: 10;
 }
 
-/* Empty state messages */
+/* ── Filter bars ────────────────────────────────────── */
+
+#filter-bar,
+#holdings-filter-bar,
+#trades-filter-bar,
+#orders-filter-bar {
+    dock: top;
+    height: auto;
+    min-height: 3;
+    padding: 1;
+    background: $panel;
+    layout: horizontal;
+    border-bottom: solid $primary 20%;
+}
+
+#filter-bar Input,
+#holdings-filter-bar Input,
+#trades-filter-bar Input,
+#orders-filter-bar Input {
+    width: 1fr;
+    min-width: 16;
+    margin: 0 1;
+}
+
+#filter-bar Select {
+    width: 1fr;
+    min-width: 16;
+    margin: 0 1;
+}
+
+#filter-bar DateSelect,
+#filter-bar _DeferredDateSelect {
+    width: 1fr;
+    min-width: 20;
+    height: 3;
+    margin: 0 1;
+    color: $text;
+    border: tall $primary 40%;
+    padding: 0 1;
+    content-align: left middle;
+}
+
+#picker-mount {
+    height: auto;
+}
+
+/* ── Empty state ────────────────────────────────────── */
+
 .empty-state {
     text-align: center;
     margin: 4 0;
@@ -118,7 +221,78 @@ LoadingIndicator {
     text-style: italic;
 }
 
-/* Account detail tabs */
+/* ── Hint text ──────────────────────────────────────── */
+
+.hint-text {
+    height: auto;
+    text-align: center;
+    color: $text-muted;
+    text-style: italic;
+    padding: 0 1;
+}
+
+/* ── Progress bar ──────────────────────────────────── */
+
+#trend-bar {
+    height: auto;
+    width: 100%;
+    align: center middle;
+    padding: 0 1;
+}
+
+#trend-bar #holdings-status {
+    width: 100%;
+    height: auto;
+    text-align: center;
+    color: $text-muted;
+}
+
+#trend-progress {
+    width: 100%;
+    height: 1;
+}
+
+#trend-progress Bar {
+    width: 1fr;
+}
+
+#trend-progress PercentageStatus {
+    width: auto;
+}
+
+#trend-progress Bar > .bar--bar {
+    color: #3498db;
+}
+
+#trend-progress Bar > .bar--complete {
+    color: #2980b9;
+}
+
+/* ── Status text ────────────────────────────────────── */
+
+#tx-status {
+    height: auto;
+    text-align: center;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+/* ── Account title bar ─────────────────────────────── */
+
+#account-title {
+    dock: top;
+    width: 100%;
+    height: auto;
+    text-align: center;
+    text-style: bold;
+    color: $secondary;
+    background: $panel;
+    padding: 0 1;
+    border-bottom: solid $primary 20%;
+}
+
+/* ── Tabs (account detail) ──────────────────────────── */
+
 TabbedContent {
     height: 1fr;
 }
@@ -132,12 +306,27 @@ TabPane {
     padding: 0;
 }
 
-/* Chart pane styling */
+Underline > .underline--bar {
+    color: $primary 40%;
+}
+
+Tab.-active {
+    color: $primary;
+    text-style: bold;
+}
+
+Tab:hover {
+    color: $secondary;
+}
+
+/* ── Charts ─────────────────────────────────────────── */
+
 #chart-controls {
     dock: top;
     height: auto;
     padding: 1;
     background: $panel;
+    border-bottom: solid $primary 20%;
 }
 
 #chart-controls Select {
@@ -157,40 +346,9 @@ TabPane {
     padding: 0 1;
 }
 
-/* Hint text */
-.hint-text {
-    dock: bottom;
-    height: auto;
-    text-align: center;
-    color: $text-muted;
-    text-style: italic;
-    padding: 0 1;
-}
+/* ── Loading ────────────────────────────────────────── */
 
-/* Filter bars for all panes */
-#holdings-filter-bar,
-#trades-filter-bar,
-#orders-filter-bar {
-    dock: top;
-    height: auto;
-    min-height: 3;
-    padding: 1;
-    background: $panel;
-    layout: horizontal;
-}
-
-#holdings-filter-bar Input,
-#trades-filter-bar Input,
-#orders-filter-bar Input {
-    width: 1fr;
-    min-width: 20;
-}
-
-/* Status text */
-#holdings-status {
-    dock: bottom;
-    height: auto;
-    text-align: center;
-    color: $text-muted;
-    padding: 0 1;
+LoadingIndicator {
+    height: 1fr;
+    color: $primary;
 }

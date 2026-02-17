@@ -34,12 +34,13 @@ class ExportDialog(ModalScreen[Path | None]):
         height: auto;
         max-height: 80%;
         background: $surface;
-        border: thick $accent;
+        border: thick $primary 60%;
         padding: 1 2;
     }
 
     ExportDialog #export-title {
         text-style: bold;
+        color: $primary;
         width: 100%;
         content-align: center middle;
         margin-bottom: 1;

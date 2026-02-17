@@ -13,9 +13,10 @@ from pydantic import BaseModel
 EXPORT_DIR = Path("exports")
 
 
-def _ensure_export_dir() -> Path:
-    EXPORT_DIR.mkdir(exist_ok=True)
-    return EXPORT_DIR
+def _ensure_export_dir(output_dir: Path | None = None) -> Path:
+    d = output_dir or EXPORT_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 def _timestamp() -> str:
@@ -90,11 +91,13 @@ def _get_rows(data: Sequence[BaseModel]) -> list[list[Any]]:
 # ── CSV Exporter ──
 
 
-def export_csv(data: Sequence[BaseModel], entity_name: str) -> Path:
+def export_csv(
+    data: Sequence[BaseModel], entity_name: str, *, output_dir: Path | None = None
+) -> Path:
     """Export data to CSV format with column headers and timestamped filename."""
-    _ensure_export_dir()
+    dest = _ensure_export_dir(output_dir)
     filename = f"{entity_name}_{_timestamp()}.csv"
-    path = EXPORT_DIR / filename
+    path = dest / filename
 
     headers = _get_headers(data)
     rows = _get_rows(data)
@@ -110,14 +113,16 @@ def export_csv(data: Sequence[BaseModel], entity_name: str) -> Path:
 # ── XLSX Exporter ──
 
 
-def export_xlsx(data: Sequence[BaseModel], entity_name: str) -> Path:
+def export_xlsx(
+    data: Sequence[BaseModel], entity_name: str, *, output_dir: Path | None = None
+) -> Path:
     """Export data to Excel format with formatting and timestamped filename."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, numbers
 
-    _ensure_export_dir()
+    dest = _ensure_export_dir(output_dir)
     filename = f"{entity_name}_{_timestamp()}.xlsx"
-    path = EXPORT_DIR / filename
+    path = dest / filename
 
     wb = Workbook()
     ws = wb.active
@@ -155,13 +160,15 @@ def export_xlsx(data: Sequence[BaseModel], entity_name: str) -> Path:
 # ── DuckDB Exporter ──
 
 
-def export_duckdb(data: Sequence[BaseModel], entity_name: str) -> Path:
+def export_duckdb(
+    data: Sequence[BaseModel], entity_name: str, *, output_dir: Path | None = None
+) -> Path:
     """Export data to DuckDB format with structured table and timestamped filename."""
     import duckdb
 
-    _ensure_export_dir()
+    dest = _ensure_export_dir(output_dir)
     filename = f"{entity_name}_{_timestamp()}.duckdb"
-    path = EXPORT_DIR / filename
+    path = dest / filename
 
     headers = _get_headers(data)
     rows = _get_rows(data)

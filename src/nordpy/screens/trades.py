@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -128,7 +129,7 @@ class TradesPane(Vertical):
         empty_msg.display = False
         table.display = True
 
-        for t in self._filtered:
+        for idx, t in enumerate(self._filtered):
             table.add_row(
                 t.trade_time.strftime("%Y-%m-%d %H:%M"),
                 t.side,
@@ -137,6 +138,7 @@ class TradesPane(Vertical):
                 f"{t.volume:,.2f}",
                 f"{t.price.value:,.2f}",
                 t.price.currency,
+                label=Text(str(idx + 1)),
             )
 
     @on(Input.Changed, "#trades-search")
@@ -276,7 +278,7 @@ class OrdersPane(Vertical):
         empty_msg.display = False
         table.display = True
 
-        for o in self._filtered:
+        for idx, o in enumerate(self._filtered):
             table.add_row(
                 str(o.order_date),
                 o.side,
@@ -286,6 +288,7 @@ class OrdersPane(Vertical):
                 f"{o.price.value:,.2f}",
                 o.price.currency,
                 o.order_state,
+                label=Text(str(idx + 1)),
             )
 
     @on(Input.Changed, "#orders-search")

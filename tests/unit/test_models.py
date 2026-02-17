@@ -123,13 +123,13 @@ class TestAccount:
 
 class TestAccountBalance:
     def test_from_info_response_dict(self):
-        """account_sum uses 'currency' key, but MoneyAmount only accepts
-        'currencyCode' via validation_alias — currency defaults to ''."""
+        """account_sum uses 'currency' key — MoneyAmount accepts both
+        'currency' and 'currencyCode' via AliasChoices."""
         data = {"account_sum": {"value": 5000.0, "currency": "DKK"}}
         bal = AccountBalance.from_info_response(1, data)
         assert bal.accid == 1
         assert bal.balance.value == 5000.0
-        assert bal.balance.currency == ""  # 'currency' key not recognized by alias
+        assert bal.balance.currency == "DKK"
 
     def test_from_info_response_list(self):
         """Some endpoints return a list instead of a single dict."""

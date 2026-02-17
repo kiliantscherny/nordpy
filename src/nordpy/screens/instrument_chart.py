@@ -33,7 +33,7 @@ class InstrumentChartScreen(ModalScreen[None]):
         width: 90%;
         height: 85%;
         background: $surface;
-        border: solid $primary;
+        border: thick $primary 60%;
         padding: 1;
     }
 
@@ -46,6 +46,7 @@ class InstrumentChartScreen(ModalScreen[None]):
         width: 1fr;
         text-align: center;
         text-style: bold;
+        color: $primary;
     }
 
     #instrument-chart-close {
@@ -78,6 +79,7 @@ class InstrumentChartScreen(ModalScreen[None]):
         height: 2;
         dock: bottom;
         text-align: center;
+        color: $secondary;
     }
     """
 

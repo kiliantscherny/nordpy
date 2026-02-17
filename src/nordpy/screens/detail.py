@@ -5,7 +5,7 @@ from __future__ import annotations
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import Footer, Header, TabbedContent, TabPane
+from textual.widgets import Footer, Header, Static, TabbedContent, TabPane
 
 from nordpy.client import NordnetClient
 from nordpy.http import HttpSession
@@ -39,7 +39,11 @@ class AccountDetailScreen(Screen):
         self.account = account
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield Header(show_clock=True)
+        yield Static(
+            f"  {self.account.display_name}  ({self.account.accno})",
+            id="account-title",
+        )
         with TabbedContent():
             with TabPane("Holdings", id="tab-holdings"):
                 yield HoldingsPane(client=self.client, accid=self.account.accid)
@@ -56,7 +60,7 @@ class AccountDetailScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.sub_title = self.account.display_name
+        pass
 
     def action_go_back(self) -> None:
         self.app.pop_screen()
@@ -68,7 +72,7 @@ class AccountDetailScreen(Screen):
 
         if active == "tab-holdings":
             pane = self.query_one(HoldingsPane)
-            data = pane._holdings
+            data = pane._filtered
             entity = f"holdings_{self.account.accno}"
         elif active == "tab-transactions":
             pane = self.query_one(TransactionsPane)
@@ -76,11 +80,11 @@ class AccountDetailScreen(Screen):
             entity = f"transactions_{self.account.accno}"
         elif active == "tab-trades":
             pane = self.query_one(TradesPane)
-            data = pane._trades
+            data = pane._filtered
             entity = f"trades_{self.account.accno}"
         elif active == "tab-orders":
             pane = self.query_one(OrdersPane)
-            data = pane._orders
+            data = pane._filtered
             entity = f"orders_{self.account.accno}"
         else:
             self.notify("Export not available for this tab", severity="warning")

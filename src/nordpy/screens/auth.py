@@ -35,15 +35,11 @@ class AuthScreen(Screen[HttpSession | None]):
         session_manager: SessionManager,
         *,
         user: str,
-        method: str = "APP",
-        password: str | None = None,
     ) -> None:
         super().__init__()
         self.http_session = session
         self.session_manager = session_manager
         self.user = user
-        self.method = method
-        self.password = password
         self._input_event = threading.Event()
         self._input_value: str = ""
 
@@ -53,23 +49,12 @@ class AuthScreen(Screen[HttpSession | None]):
             with VerticalScroll(id="auth-container"):
                 yield Static("MitID Authentication", classes="auth-title")
                 yield Static(f"User: {self.user}", classes="auth-info")
-                yield Static(f"Method: {self.method}", classes="auth-info")
-                if self.method == "TOKEN":
-                    yield Input(placeholder="Enter 6-digit TOTP code", id="totp-input")
-                    if not self.password:
-                        yield Input(
-                            placeholder="Enter password",
-                            password=True,
-                            id="password-input",
-                        )
-                    yield Button("Authenticate", variant="primary", id="auth-button")
-                else:
-                    yield Static(
-                        "Open your MitID app and approve the login request.",
-                        id="app-instructions",
-                    )
-                    yield Static("", id="qr-display")
-                    yield LoadingIndicator(id="auth-loading")
+                yield Static(
+                    "Open your MitID app and approve the login request.",
+                    id="app-instructions",
+                )
+                yield Static("", id="qr-display")
+                yield LoadingIndicator(id="auth-loading")
                 yield Label("", id="auth-status")
                 with Horizontal(id="cpr-group"):
                     yield Input(
@@ -81,13 +66,7 @@ class AuthScreen(Screen[HttpSession | None]):
 
     def on_mount(self) -> None:
         self.query_one("#cpr-group").display = False
-        if self.method == "APP":
-            self._run_app_auth()
-
-    @on(Button.Pressed, "#auth-button")
-    def on_auth_button(self) -> None:
-        """Handle TOKEN method authentication."""
-        self._run_token_auth()
+        self._run_app_auth()
 
     @on(Button.Pressed, "#cpr-submit")
     def on_cpr_submit(self) -> None:
@@ -152,60 +131,11 @@ class AuthScreen(Screen[HttpSession | None]):
             auth = AuthManager(self.http_session, self.session_manager)
             auth.authenticate(
                 self.user,
-                self.method,
-                self.password,
+                "APP",
+                None,
                 on_status=update_status,
                 on_qr_display=update_qr,
                 on_input_needed=request_input,
-            )
-            if not worker.is_cancelled:
-                self.app.call_from_thread(self.dismiss, self.http_session)
-        except AuthError as e:
-            if not worker.is_cancelled:
-                self.app.call_from_thread(
-                    self.notify, f"Authentication failed: {e}", severity="error"
-                )
-                self.app.call_from_thread(status_label.update, f"Failed: {e}")
-        except Exception as e:
-            if not worker.is_cancelled:
-                msg = self._extract_error_message(e)
-                self.app.call_from_thread(self.notify, msg, severity="error")
-                self.app.call_from_thread(status_label.update, f"Failed: {msg}")
-
-    @work(thread=True)
-    def _run_token_auth(self) -> None:
-        """Run TOKEN method authentication in a worker thread."""
-        worker = get_current_worker()
-        status_label = self.query_one("#auth-status", Label)
-
-        totp_input = self.query_one("#totp-input", Input)
-        totp_code = totp_input.value.strip()
-        if not totp_code:
-            self.app.call_from_thread(
-                self.notify, "Please enter your TOTP code", severity="warning"
-            )
-            return
-
-        password = self.password
-        if not password:
-            pw_input = self.query_one("#password-input", Input)
-            password = pw_input.value
-
-        def update_status(msg: str) -> None:
-            if not worker.is_cancelled:
-                self.app.call_from_thread(status_label.update, msg)
-
-        def provide_totp(_prompt: str) -> str:
-            return totp_code
-
-        try:
-            auth = AuthManager(self.http_session, self.session_manager)
-            auth.authenticate(
-                self.user,
-                "TOKEN",
-                password,
-                on_status=update_status,
-                on_input_needed=provide_totp,
             )
             if not worker.is_cancelled:
                 self.app.call_from_thread(self.dismiss, self.http_session)

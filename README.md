@@ -16,6 +16,8 @@
 ## Features
 
 - Browse accounts, balances, holdings, transactions, trades, and orders
+- **Portfolio value chart** and **instrument price charts** in the terminal
+- **Sparkline trends** on holdings (3-month price history via yfinance)
 - Export data to **CSV**, **Excel**, or **DuckDB**
 - Session persistence with automatic re-authentication
 - Headless export mode (no TUI) for scripting
@@ -52,6 +54,9 @@ uv run nordpy --user <your-mitid-username>
 
 # Force re-authentication (ignore saved session)
 uv run nordpy --user <your-mitid-username> --force-login
+
+# Verbose logging (debug output to stderr + nordpy.log)
+uv run nordpy --user <your-mitid-username> --verbose
 ```
 
 > [!NOTE]
@@ -74,10 +79,12 @@ Exported files are saved to the `exports/` directory.
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Select account / drill into detail |
+| `Enter` | Select account / view instrument chart |
+| `Tab` | Switch between tabs |
 | `e` | Export current view |
 | `r` | Refresh data |
-| `q` / `Esc` | Quit |
+| `Backspace` / `Esc` | Go back / quit |
+| `q` | Quit |
 
 ## Development
 
@@ -92,10 +99,10 @@ uv run pytest
 uv run pytest --cov=nordpy --cov-report=term-missing
 
 # Lint
-uv run ruff check src/
+uv run ruff check .
 
 # Type check
-uv run ty check src/
+uv run ty check
 ```
 
 ## License

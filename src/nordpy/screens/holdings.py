@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import DataTable, Input, Static
+from textual.widgets import DataTable, Input, ProgressBar, Static
 from textual.worker import get_current_worker
 
 from nordpy.client import NordnetAPIError, NordnetClient
@@ -19,11 +20,23 @@ from nordpy.services.price_history import PriceHistoryService
 # Sparkline characters (8 levels)
 SPARK_CHARS = "▁▂▃▄▅▆▇█"
 
+# Blue gradient from dark to bright (8 levels matching SPARK_CHARS)
+SPARK_COLORS = [
+    "#1a3a5c",
+    "#1e5080",
+    "#2266a0",
+    "#2980b9",
+    "#3498db",
+    "#5dade2",
+    "#85c1e9",
+    "#aed6f1",
+]
 
-def make_sparkline(values: list[float], width: int = 12) -> str:
-    """Create an ASCII sparkline from a list of values."""
+
+def make_sparkline(values: list[float], width: int = 12) -> Text:
+    """Create a Rich Text sparkline with a blue gradient."""
     if not values or len(values) < 2:
-        return "─" * width
+        return Text("─" * width, style="dim")
 
     # Sample values to fit width
     if len(values) > width:
@@ -37,16 +50,24 @@ def make_sparkline(values: list[float], width: int = 12) -> str:
     val_range = max_val - min_val
 
     if val_range == 0:
-        return SPARK_CHARS[4] * len(sampled)
+        return Text(SPARK_CHARS[4] * len(sampled), style=SPARK_COLORS[4])
 
-    result = []
+    result = Text()
     for v in sampled:
-        # Normalize to 0-7 range
         idx = int((v - min_val) / val_range * 7)
         idx = max(0, min(7, idx))
-        result.append(SPARK_CHARS[idx])
+        result.append(SPARK_CHARS[idx], style=SPARK_COLORS[idx])
 
-    return "".join(result)
+    return result
+
+
+def _styled_gain(value: float, formatted: str) -> Text:
+    """Return a Rich Text with green (positive) or red (negative) styling."""
+    if value > 0:
+        return Text(formatted, style="green")
+    elif value < 0:
+        return Text(formatted, style="red")
+    return Text(formatted, style="dim")
 
 
 class HoldingsPane(Vertical):
@@ -67,7 +88,7 @@ class HoldingsPane(Vertical):
         self._all_holdings: list[Holding] = []
         self._filtered: list[Holding] = []
         self._row_to_holding: dict[int, Holding] = {}
-        self._sparklines: dict[str, str] = {}  # symbol -> sparkline
+        self._sparklines: dict[str, Text] = {}  # symbol -> sparkline Text
         self._price_service = PriceHistoryService()
         self._sort_column: str | None = None
         self._sort_reverse: bool = False
@@ -77,12 +98,14 @@ class HoldingsPane(Vertical):
             yield Input(placeholder="Search instruments...", id="holdings-search")
         yield DataTable(id="holdings-table", cursor_type="row")
         yield Static("", id="holdings-empty", classes="empty-state")
+        with Vertical(id="trend-bar"):
+            yield Static("", id="holdings-status")
+            yield ProgressBar(id="trend-progress", total=100, show_eta=False, show_percentage=False)
         yield Static(
             "Press Enter to view chart | Click column headers to sort",
             id="holdings-hint",
             classes="hint-text",
         )
-        yield Static("", id="holdings-status")
 
     def on_mount(self) -> None:
         table = self.query_one("#holdings-table", DataTable)
@@ -98,6 +121,7 @@ class HoldingsPane(Vertical):
             "Gain %",
             "3M Trend",
         )
+        self.query_one("#trend-bar").display = False
         self.load_data()
 
     @work(thread=True)
@@ -150,19 +174,23 @@ class HoldingsPane(Vertical):
         end_date = date.today()
         start_date = end_date - timedelta(days=90)
 
-        loaded = 0
+        # Count symbols that need loading
+        symbols_to_load = [
+            h for h in self._all_holdings if h.instrument.symbol
+        ]
+        total = len(symbols_to_load)
+        if total == 0:
+            return
 
-        for h in self._all_holdings:
+        self.app.call_from_thread(self._show_progress, total)
+
+        for h in symbols_to_load:
             if worker.is_cancelled:
                 return
 
             symbol = h.instrument.symbol
             if not symbol:
                 continue
-
-            self.app.call_from_thread(
-                status.update, f"Loading trends... {symbol}"
-            )
 
             # Get market from ISIN
             market = ""
@@ -176,22 +204,42 @@ class HoldingsPane(Vertical):
             if prices:
                 sorted_prices = [p for _, p in sorted(prices.items())]
                 self._sparklines[symbol] = make_sparkline(sorted_prices)
-                # Update table with new sparkline
                 self.app.call_from_thread(self._update_sparkline_in_table, symbol)
 
-            loaded += 1
+            self.app.call_from_thread(self._advance_progress)
 
         if not worker.is_cancelled:
-            # Refresh the table to show all sparklines
             self.app.call_from_thread(self._apply_filters)
+            self.app.call_from_thread(self._hide_progress)
             self.app.call_from_thread(
                 status.update, f"Loaded {len(self._all_holdings)} holdings"
             )
 
+    def _show_progress(self, total: int) -> None:
+        """Show and reset the trend progress bar (main thread)."""
+        self._trend_total = total
+        self._trend_loaded = 0
+        progress = self.query_one("#trend-progress", ProgressBar)
+        progress.update(total=total, progress=0)
+        self.query_one("#trend-bar").display = True
+
+    def _advance_progress(self) -> None:
+        """Advance progress bar by one and update status text (main thread)."""
+        self._trend_loaded += 1
+        pct = int(self._trend_loaded / self._trend_total * 100) if self._trend_total else 0
+        self.query_one("#trend-progress", ProgressBar).advance(1)
+        self.query_one("#holdings-status", Static).update(
+            f"Loading trends ({self._trend_loaded}/{self._trend_total}) — {pct}%"
+        )
+
+    def _hide_progress(self) -> None:
+        """Hide the trend progress bar (main thread)."""
+        self.query_one("#trend-bar").display = False
+
     def _update_sparkline_in_table(self, symbol: str) -> None:
         """Update the sparkline for a specific symbol in the table."""
         table = self.query_one("#holdings-table", DataTable)
-        sparkline = self._sparklines.get(symbol, "─" * 12)
+        sparkline = self._sparklines.get(symbol, Text("─" * 12, style="dim"))
 
         # Find the row with this symbol and update the sparkline column
         row_keys = list(table.rows.keys())
@@ -271,7 +319,9 @@ class HoldingsPane(Vertical):
 
         for idx, h in enumerate(self._filtered):
             symbol = h.instrument.symbol or ""
-            sparkline = self._sparklines.get(symbol, "─" * 12)
+            sparkline = self._sparklines.get(
+                symbol, Text("─" * 12, style="dim")
+            )
 
             table.add_row(
                 h.instrument.name,
@@ -281,9 +331,10 @@ class HoldingsPane(Vertical):
                 f"{h.acq_price.value:,.2f}",
                 f"{h.market_value.value:,.2f}",
                 h.market_value.currency,
-                f"{h.gain_loss:+,.2f}",
-                f"{h.gain_loss_pct:+.1f}%",
+                _styled_gain(h.gain_loss, f"{h.gain_loss:+,.2f}"),
+                _styled_gain(h.gain_loss_pct, f"{h.gain_loss_pct:+.1f}%"),
                 sparkline,
+                label=Text(str(idx + 1)),
             )
             self._row_to_holding[idx] = h
 

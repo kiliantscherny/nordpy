@@ -11,7 +11,10 @@ class MoneyAmount(BaseModel):
     """Monetary value with currency. Handles both API field name variants."""
 
     value: float
-    currency: str = Field(default="", validation_alias="currencyCode")
+    currency: str = Field(
+        default="",
+        validation_alias=AliasChoices("currency", "currencyCode"),
+    )
 
     @field_validator("currency", mode="before")
     @classmethod

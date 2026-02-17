@@ -22,6 +22,7 @@ dependencies = [
     "qrcode>=8.2",
     "requests>=2.32.5",
     "textual>=3.1.0",
+    "textual-datepicker>=0.2.4",
     "textual-plotext>=0.2.1",
     "yfinance>=0.2.40",
 ]
@@ -39,6 +40,15 @@ dev = [
     "responses>=0.25.0",
     "textual-dev>=1.7.0",
 ]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.2.0"
+version_files = [
+    "pyproject.toml:^version",
+    "src/nordpy/__init__.py:^__version__",
+]
+update_changelog_on_bump = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

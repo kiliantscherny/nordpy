@@ -4,14 +4,40 @@ from __future__ import annotations
 
 from datetime import date
 
+from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import DataTable, Input, Select, Static
 from textual.worker import get_current_worker
+from textual_datepicker import DatePicker, DateSelect
+from textual_datepicker._date_select import DatePickerDialog
 
 from nordpy.client import NordnetAPIError, NordnetClient
 from nordpy.models import Transaction
+
+
+class _DeferredDateSelect(DateSelect):
+    """DateSelect that defers picker mounting until the screen DOM is ready.
+
+    Textual dispatches on_mount to every class in the MRO, so overriding
+    on_mount alone doesn't prevent the parent DateSelect.on_mount from running.
+    We set self.dialog to a sentinel so the parent's ``if self.dialog is None``
+    guard skips, then do the real mounting after the screen DOM is ready.
+    """
+
+    def on_mount(self) -> None:
+        # Block the parent's on_mount from calling app.query_one() by
+        # making its `if self.dialog is None` check fail.
+        self.dialog = object()
+        self.call_after_refresh(self._mount_dialog)
+
+    def _mount_dialog(self) -> None:
+        self.dialog = None  # reset sentinel
+        dialog = DatePickerDialog()
+        dialog.target = self
+        self.dialog = dialog
+        self.screen.query_one(self.picker_mount).mount(dialog)
 
 
 class TransactionsPane(Vertical):
@@ -36,8 +62,19 @@ class TransactionsPane(Vertical):
                 id="filter-type",
                 allow_blank=False,
             )
-            yield Input(placeholder="From (YYYY-MM-DD)", id="filter-from")
-            yield Input(placeholder="To (YYYY-MM-DD)", id="filter-to")
+            yield _DeferredDateSelect(
+                picker_mount="#picker-mount",
+                placeholder="From date",
+                id="filter-from",
+                format="YYYY-MM-DD",
+            )
+            yield _DeferredDateSelect(
+                picker_mount="#picker-mount",
+                placeholder="To date",
+                id="filter-to",
+                format="YYYY-MM-DD",
+            )
+        yield Vertical(id="picker-mount")
         yield DataTable(id="transactions-table", cursor_type="row")
         yield Static("", id="tx-empty", classes="empty-state")
         yield Static("Click column headers to sort", classes="hint-text")
@@ -109,16 +146,15 @@ class TransactionsPane(Vertical):
         """Filter transactions and repopulate the DataTable."""
         instrument_input = self.query_one("#filter-instrument", Input)
         type_select = self.query_one("#filter-type", Select)
-        from_input = self.query_one("#filter-from", Input)
-        to_input = self.query_one("#filter-to", Input)
+        from_select = self.query_one("#filter-from", DateSelect)
+        to_select = self.query_one("#filter-to", DateSelect)
 
         instrument_q = instrument_input.value.strip().lower()
         type_val = type_select.value
-        from_str = from_input.value.strip()
-        to_str = to_input.value.strip()
 
-        from_date = _parse_date(from_str)
-        to_date = _parse_date(to_str)
+        # Get dates from DateSelect (pendulum.DateTime or None)
+        from_date: date | None = from_select.date.date() if from_select.date else None
+        to_date: date | None = to_select.date.date() if to_select.date else None
 
         filtered = self._all_transactions
 
@@ -184,7 +220,7 @@ class TransactionsPane(Vertical):
         empty_msg.display = False
         table.display = True
 
-        for t in self._filtered:
+        for idx, t in enumerate(self._filtered):
             qty = f"{t.quantity:,.2f}" if t.quantity else ""
             price = f"{t.price.value:,.2f}" if t.price else ""
             amount = f"{t.amount.value:,.2f}"
@@ -200,11 +236,10 @@ class TransactionsPane(Vertical):
                 amount,
                 currency,
                 balance,
+                label=Text(str(idx + 1)),
             )
 
     @on(Input.Submitted, "#filter-instrument")
-    @on(Input.Submitted, "#filter-from")
-    @on(Input.Submitted, "#filter-to")
     def on_filter_input_submitted(self) -> None:
         self._apply_filters()
 
@@ -214,6 +249,11 @@ class TransactionsPane(Vertical):
 
     @on(Select.Changed, "#filter-type")
     def on_type_changed(self) -> None:
+        self._apply_filters()
+
+    @on(DatePicker.Selected)
+    def on_date_selected(self) -> None:
+        """Re-filter when a date is picked from either DateSelect."""
         self._apply_filters()
 
     @on(DataTable.HeaderSelected)
@@ -228,13 +268,3 @@ class TransactionsPane(Vertical):
             self._sort_reverse = False
 
         self._apply_filters()
-
-
-def _parse_date(s: str) -> date | None:
-    """Parse a YYYY-MM-DD string to a date, or return None."""
-    if not s:
-        return None
-    try:
-        return date.fromisoformat(s)
-    except ValueError:
-        return None
