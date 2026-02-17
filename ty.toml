@@ -1,0 +1,9 @@
+[environment]
+python-version = "3.12"
+
+[rules]
+# Textual's @work(thread=True) injects call_from_thread at runtime
+# and generic covariance issues with list[Subclass] -> list[Base]
+unresolved-attribute = "ignore"
+invalid-argument-type = "warn"
+call-non-callable = "ignore"

@@ -1,0 +1,5 @@
+[lint]
+exclude = ["src/nordpy/BrowserClient/*"]
+
+[format]
+exclude = ["src/nordpy/BrowserClient/*"]

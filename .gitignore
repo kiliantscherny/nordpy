@@ -1,2 +1,39 @@
+# Session & exports
 .nordnet_session.json
 exports/
+
+# Logs
+*.log
+
+# Spec Kit
+specs/
+.specify/
+
+# Claude
+.claude/
+CLAUDE.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.tmp
+
+# Environment
+.env
+.env.*

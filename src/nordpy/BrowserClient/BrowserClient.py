@@ -1,10 +1,19 @@
-import requests, time, hashlib, base64, hmac, qrcode, os, threading, json
-from BrowserClient.CustomSRP import CustomSRP, hex_to_bytes, bytes_to_hex, pad
+import requests
+import time
+import hashlib
+import base64
+import hmac
+import qrcode
+import os
+import threading
+import json
+from nordpy.BrowserClient.CustomSRP import CustomSRP, hex_to_bytes, bytes_to_hex, pad
 
 class BrowserClient():
-    def __init__(self, client_hash: str, authentication_session_id: str, requests_session = requests.Session()):
+    def __init__(self, client_hash: str, authentication_session_id: str, requests_session = requests.Session(), on_qr_display=None):
         self.qr_display_thread_lock = threading.Lock()
         self.session = requests_session
+        self.on_qr_display = on_qr_display
 
         self.client_hash = client_hash
         self.authentication_session_id = authentication_session_id
@@ -27,14 +36,17 @@ class BrowserClient():
     def __display_qr_ascii(self, stop_event):
         def render_qr(qr):
             matrix = qr.get_matrix()
-            return "\n".join("".join(("  " if cell else "██" for cell in row)) for row in matrix)
+            return "\n".join("".join(("  " if cell else "\u2588\u2588" for cell in row)) for row in matrix)
 
         frame = True
         while not stop_event.is_set():
-            os.system("cls" if os.name == "nt" else "clear")
-            print("Scan this QR Code in the app:")
             qr1, qr2 = self.__get_qr_codes()
-            print(render_qr(qr1) if frame else render_qr(qr2))
+            if self.on_qr_display:
+                qr = qr1 if frame else qr2
+                self.on_qr_display(qr.get_matrix())
+            else:
+                print("Scan this QR Code in the app:")
+                print(render_qr(qr1) if frame else render_qr(qr2))
             frame = not frame
             stop_event.wait(1)
 
@@ -189,7 +201,7 @@ class BrowserClient():
 
         r = r.json()
         if "nextAuthenticator" not in r or "authenticatorType" not in r["nextAuthenticator"] or r["nextAuthenticator"]["authenticatorType"] != "PASSWORD":
-            print(f"Ran into an unexpected situation, was expecting to be asked for password after TOTP but got the following response")
+            print("Ran into an unexpected situation, was expecting to be asked for password after TOTP but got the following response")
             raise Exception(r.content)
 
         self.current_authenticator_type = r["nextAuthenticator"]["authenticatorType"]
@@ -393,7 +405,7 @@ class BrowserClient():
 
         r = r.json()
         if r["errors"] and len(r["errors"]) > 0:
-            print(f"Could not prove the app login")
+            print("Could not prove the app login")
             raise Exception(r)
 
         self.finalization_authentication_session_id = r["nextSessionId"]

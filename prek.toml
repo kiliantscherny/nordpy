@@ -1,0 +1,32 @@
+[[repos]]
+repo = "builtin"
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+
+[[repos.hooks]]
+id = "check-json"
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.0"
+hooks = [{ id = "ruff", args = ["--fix"] }]
+
+[[repos]]
+repo = "https://github.com/astral-sh/uv-pre-commit"
+rev = "0.10.3"
+hooks = [
+    { id = "uv-lock" },
+    { id = "uv-export", args = ["--frozen", "--no-hashes", "-o", "requirements.txt"] },
+]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "ty-check"
+name = "ty check"
+entry = "ty check"
+language = "system"
+pass_filenames = false
+types = ["python"]

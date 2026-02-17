@@ -1,0 +1,17 @@
+env_list = ["py310", "py311", "py312", "py313", "lint", "typecheck"]
+
+[env_run_base]
+description = "Run tests"
+dependency_groups = ["dev"]
+commands = [["pytest"]]
+
+[env.lint]
+description = "Run ruff linter"
+skip_install = true
+deps = ["ruff>=0.15.0"]
+commands = [["ruff", "check", "."]]
+
+[env.typecheck]
+description = "Run ty type checker"
+deps = ["ty"]
+commands = [["ty", "check"]]

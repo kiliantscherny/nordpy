@@ -1,6 +1,9 @@
-import binascii, base64, hashlib, argparse
+import binascii
+import base64
+import hashlib
+import argparse
 from Crypto import Random
-from BrowserClient.BrowserClient import BrowserClient
+from nordpy.BrowserClient.BrowserClient import BrowserClient
 from bs4 import BeautifulSoup
 
 # Use this function to add the minimum required args to your login flow
@@ -26,11 +29,11 @@ def process_args(args):
 
 # get_authentication_code is generally generic enough that you do not need to create your own
 # calls to BrowserClient
-def get_authentication_code(session, aux, method, user_id, password):
+def get_authentication_code(session, aux, method, user_id, password, on_qr_display=None):
     client_hash = binascii.hexlify(base64.b64decode(aux["coreClient"]["checksum"])).decode('ascii')
     authentication_session_id = aux["parameters"]["authenticationSessionId"]
 
-    MitIDClient = BrowserClient(client_hash, authentication_session_id, session)
+    MitIDClient = BrowserClient(client_hash, authentication_session_id, session, on_qr_display=on_qr_display)
     available_authenticators = MitIDClient.identify_as_user_and_get_available_authenticators(user_id)
 
     print(f"Available authenticator: {available_authenticators}")
@@ -42,9 +45,9 @@ def get_authentication_code(session, aux, method, user_id, password):
     elif method == "APP" and "APP" in available_authenticators:
         MitIDClient.authenticate_with_app()
     elif method == "TOKEN" and "TOKEN" not in available_authenticators:
-        raise Exception(f"Token authentication method chosen but not available for MitID user")
+        raise Exception("Token authentication method chosen but not available for MitID user")
     elif method == "APP" and "APP" not in available_authenticators:
-        raise Exception(f"App authentication method chosen but not available for MitID user")
+        raise Exception("App authentication method chosen but not available for MitID user")
     else:
         raise Exception(f"Unknown authenticator method: {method}")
 
@@ -70,9 +73,9 @@ def choose_between_multiple_identitites(session, request, soup):
             selected_option = login_options[int(identity)-1].a["data-loginoptions"]
             data["ChosenOptionJson"] = selected_option
         else:
-            raise Exception(f"Identity not in list of identities")
+            raise Exception("Identity not in list of identities")
     except:
-        raise Exception(f"Wrongly entered identity")
+        raise Exception("Wrongly entered identity")
     request = session.post(request.url, data=data)
     soup = BeautifulSoup(request.text, "xml")
     return request, soup
