@@ -18,8 +18,8 @@
 <a href="https://pydantic.dev/"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json" alt="Pydantic" style="max-width:100%;"></a>
 <a href="http://commitizen.github.io/cz-cli/"><img src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg" alt="Pydantic" style="max-width:100%;"></a>
 <br>
-<a href="https://github.com/kiliantscherny/nordpy/actions/workflows/ci.yml"><img src="https://github.com/kiliantscherny/nordpy/actions/workflows/ci.yml/badge.svg" alt="CI" style="max-width:100%;></a>
-<a href="https://github.com/kiliantscherny/nordpy/actions/workflows/release.yml"><img src="https://github.com/kiliantscherny/nordpy/actions/workflows/release.yml/badge.svg" alt="Release to PyPI" style="max-width:100%;></a>
+<a href="https://github.com/kiliantscherny/nordpy/actions/workflows/ci.yml"><img src="https://github.com/kiliantscherny/nordpy/actions/workflows/ci.yml/badge.svg" alt="CI" style="max-width:100%;"></a>
+<a href="https://github.com/kiliantscherny/nordpy/actions/workflows/release.yml"><img src="https://github.com/kiliantscherny/nordpy/actions/workflows/release.yml/badge.svg" alt="Release to PyPI" style="max-width:100%;"></a>
 
 ---
 
