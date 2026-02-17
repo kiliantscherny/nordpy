@@ -8,7 +8,7 @@ import secrets
 import string
 import time
 import uuid
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -95,6 +95,10 @@ class AuthManager:
             # ── Check if this is an HTTP redirect ──
             if response.status_code in (301, 302, 303, 307, 308):
                 location = response.headers.get("Location", "")
+                # Resolve relative redirects (e.g. "/logind?code=...")
+                # against the current response URL so we always have a
+                # fully-qualified URL for both the domain check and GET.
+                location = urljoin(str(response.url), location)
                 logger.debug(
                     "Redirect hop {}: {} → {}",
                     hop + 1,
@@ -105,7 +109,7 @@ class AuthManager:
                 # If the Location points to nordnet.dk with a code, STOP.
                 loc_parsed = urlparse(location)
                 loc_qs = parse_qs(loc_parsed.query)
-                if "code" in loc_qs and "nordnet" in loc_parsed.netloc:
+                if "code" in loc_qs and "nordnet.dk" in loc_parsed.netloc:
                     code = loc_qs["code"][0]
                     logger.info(
                         "Redirect hop {}: intercepted OIDC code (len={}) — "
