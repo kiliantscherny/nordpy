@@ -1,6 +1,6 @@
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.0.1"
+version = "1.1.0"
 version_provider = "commitizen"
 version_scheme = "pep440"
 version_files = [
@@ -16,7 +16,7 @@ gpg_sign = false
 annotated_tag = false
 major_version_zero = false
 prerelease_offset = 0
-retry_after_failure = false
+retry_after_failure = true
 allow_abort = false
 message_length_limit = 0
 allowed_prefixes = [
