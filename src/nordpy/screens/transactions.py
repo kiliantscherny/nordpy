@@ -8,13 +8,34 @@ from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import DataTable, Input, Select, Static
+from textual.widgets import Button, DataTable, Input, Select, Static
 from textual.worker import get_current_worker
 from textual_datepicker import DatePicker, DateSelect
+from textual.css.query import NoMatches
+from textual.widget import events
 from textual_datepicker._date_select import DatePickerDialog
 
 from nordpy.client import NordnetAPIError, NordnetClient
 from nordpy.models import Transaction
+
+
+class _StableDatePickerDialog(DatePickerDialog):
+    """DatePickerDialog that defers the blur check.
+
+    The upstream ``on_descendant_blur`` immediately hides the dialog when no
+    descendant has focus. This races with month-navigation clicks: the old
+    DayLabel blurs *before* the MonthControl button receives focus, so the
+    dialog disappears. Deferring the check with ``call_after_refresh`` lets
+    the new widget receive focus first.
+    """
+
+    def on_descendant_blur(self, event: events.DescendantBlur) -> None:
+        # Use a short timer so focus has fully settled on the new widget.
+        self.set_timer(0.1, self._check_blur)
+
+    def _check_blur(self) -> None:
+        if len(self.query("*:focus-within")) == 0:
+            self.display = False
 
 
 class _DeferredDateSelect(DateSelect):
@@ -24,6 +45,10 @@ class _DeferredDateSelect(DateSelect):
     on_mount alone doesn't prevent the parent DateSelect.on_mount from running.
     We set self.dialog to a sentinel so the parent's ``if self.dialog is None``
     guard skips, then do the real mounting after the screen DOM is ready.
+
+    Both _mount_dialog and _show_date_picker use ``self.screen.query_one``
+    instead of the upstream ``self.app.query_one`` because #picker-mount lives
+    on a pushed screen, not the app's default screen.
     """
 
     def on_mount(self) -> None:
@@ -33,11 +58,42 @@ class _DeferredDateSelect(DateSelect):
         self.call_after_refresh(self._mount_dialog)
 
     def _mount_dialog(self) -> None:
+        from textual_datepicker._date_picker import MonthHeader
+
+        # Use single-line format so month+year fit in a 1-row header.
+        MonthHeader.format = "MMM YYYY"
+
         self.dialog = None  # reset sentinel
-        dialog = DatePickerDialog()
+        dialog = _StableDatePickerDialog()
         dialog.target = self
         self.dialog = dialog
         self.screen.query_one(self.picker_mount).mount(dialog)
+
+        # The upstream MonthHeader.__init__ sets self.renderable directly
+        # which doesn't trigger a render in newer Textual. Force a refresh
+        # after mount so the month label is visible immediately.
+        def _refresh_header() -> None:
+            if dialog.date_picker is not None:
+                dialog.date_picker._update_month_label()
+
+        self.set_timer(0.05, _refresh_header)
+
+    def _show_date_picker(self) -> None:
+        mnt_widget = self.screen.query_one(self.picker_mount)
+        self.dialog.display = True
+        self.dialog.offset = self.region.offset - mnt_widget.content_region.offset
+        self.dialog.offset = (self.dialog.offset.x, self.dialog.offset.y + 3)
+        if self.date is not None:
+            self.dialog.date_picker.date = self.date
+            for day in self.dialog.query("DayLabel.--day"):
+                if day.day == self.date.day:
+                    day.focus()
+                    break
+        else:
+            try:
+                self.dialog.query_one("DayLabel.--today").focus()
+            except NoMatches:
+                self.dialog.query("DayLabel.--day").first().focus()
 
 
 class TransactionsPane(Vertical):
@@ -74,6 +130,7 @@ class TransactionsPane(Vertical):
                 id="filter-to",
                 format="YYYY-MM-DD",
             )
+            yield Button("Reset", id="filter-reset", classes="filter-reset")
         yield Vertical(id="picker-mount")
         yield DataTable(id="transactions-table", cursor_type="row")
         yield Static("", id="tx-empty", classes="empty-state")
@@ -254,6 +311,17 @@ class TransactionsPane(Vertical):
     @on(DatePicker.Selected)
     def on_date_selected(self) -> None:
         """Re-filter when a date is picked from either DateSelect."""
+        self._apply_filters()
+
+    @on(Button.Pressed, "#filter-reset")
+    def on_reset_filters(self) -> None:
+        """Reset all filters to their defaults."""
+        self.query_one("#filter-instrument", Input).value = ""
+        self.query_one("#filter-type", Select).value = "ALL"
+        self.query_one("#filter-from", DateSelect).date = None
+        self.query_one("#filter-to", DateSelect).date = None
+        self._sort_column = None
+        self._sort_reverse = False
         self._apply_filters()
 
     @on(DataTable.HeaderSelected)

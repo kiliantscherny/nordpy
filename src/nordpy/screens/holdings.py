@@ -8,7 +8,7 @@ from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import DataTable, Input, ProgressBar, Static
+from textual.widgets import Button, DataTable, Input, ProgressBar, Static
 from textual.worker import get_current_worker
 
 from nordpy.client import NordnetAPIError, NordnetClient
@@ -96,6 +96,7 @@ class HoldingsPane(Vertical):
     def compose(self) -> ComposeResult:
         with Horizontal(id="holdings-filter-bar"):
             yield Input(placeholder="Search instruments...", id="holdings-search")
+            yield Button("Reset", id="holdings-reset", classes="filter-reset")
         yield DataTable(id="holdings-table", cursor_type="row")
         yield Static("", id="holdings-empty", classes="empty-state")
         with Vertical(id="trend-bar"):
@@ -340,6 +341,14 @@ class HoldingsPane(Vertical):
 
     @on(Input.Changed, "#holdings-search")
     def on_search_changed(self) -> None:
+        self._apply_filters()
+
+    @on(Button.Pressed, "#holdings-reset")
+    def on_reset_filters(self) -> None:
+        """Reset all filters to their defaults."""
+        self.query_one("#holdings-search", Input).value = ""
+        self._sort_column = None
+        self._sort_reverse = False
         self._apply_filters()
 
     @on(DataTable.HeaderSelected)

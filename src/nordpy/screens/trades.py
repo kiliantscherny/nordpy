@@ -6,7 +6,7 @@ from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import DataTable, Input, Static
+from textual.widgets import Button, DataTable, Input, Static
 from textual.worker import get_current_worker
 
 from nordpy.client import NordnetAPIError, NordnetClient
@@ -28,6 +28,7 @@ class TradesPane(Vertical):
     def compose(self) -> ComposeResult:
         with Horizontal(id="trades-filter-bar"):
             yield Input(placeholder="Search instruments...", id="trades-search")
+            yield Button("Reset", id="trades-reset", classes="filter-reset")
         yield DataTable(id="trades-table", cursor_type="row")
         yield Static("", id="trades-empty", classes="empty-state")
         yield Static("Click column headers to sort", classes="hint-text")
@@ -145,6 +146,14 @@ class TradesPane(Vertical):
     def on_search_changed(self) -> None:
         self._apply_filters()
 
+    @on(Button.Pressed, "#trades-reset")
+    def on_reset_filters(self) -> None:
+        """Reset all filters to their defaults."""
+        self.query_one("#trades-search", Input).value = ""
+        self._sort_column = None
+        self._sort_reverse = False
+        self._apply_filters()
+
     @on(DataTable.HeaderSelected)
     def on_header_selected(self, event: DataTable.HeaderSelected) -> None:
         """Handle column header click for sorting."""
@@ -174,6 +183,7 @@ class OrdersPane(Vertical):
     def compose(self) -> ComposeResult:
         with Horizontal(id="orders-filter-bar"):
             yield Input(placeholder="Search instruments...", id="orders-search")
+            yield Button("Reset", id="orders-reset", classes="filter-reset")
         yield DataTable(id="orders-table", cursor_type="row")
         yield Static("", id="orders-empty", classes="empty-state")
         yield Static("Click column headers to sort", classes="hint-text")
@@ -293,6 +303,14 @@ class OrdersPane(Vertical):
 
     @on(Input.Changed, "#orders-search")
     def on_search_changed(self) -> None:
+        self._apply_filters()
+
+    @on(Button.Pressed, "#orders-reset")
+    def on_reset_filters(self) -> None:
+        """Reset all filters to their defaults."""
+        self.query_one("#orders-search", Input).value = ""
+        self._sort_column = None
+        self._sort_reverse = False
         self._apply_filters()
 
     @on(DataTable.HeaderSelected)

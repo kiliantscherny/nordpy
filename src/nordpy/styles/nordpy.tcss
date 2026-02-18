@@ -212,6 +212,14 @@ DataTable > .datatable--hover {
     height: auto;
 }
 
+/* ── Filter reset button ──────────────────────────── */
+
+.filter-reset {
+    width: auto;
+    min-width: 9;
+    margin: 0 0 0 1;
+}
+
 /* ── Empty state ────────────────────────────────────── */
 
 .empty-state {
@@ -311,12 +319,63 @@ Underline > .underline--bar {
 }
 
 Tab.-active {
-    color: $primary;
+    color: $text;
     text-style: bold;
 }
 
 Tab:hover {
     color: $secondary;
+}
+
+/* ── Date picker ───────────────────────────────────── */
+
+DatePicker .header {
+    height: 3;
+}
+
+DatePicker MonthControl {
+    background: transparent;
+    color: $text;
+    text-style: bold;
+    border: none;
+    border-top: none;
+    border-bottom: none;
+    width: 3;
+    min-width: 3;
+    max-width: 3;
+    height: 3;
+    min-height: 1;
+    padding: 0;
+    content-align: center middle;
+}
+
+DatePicker MonthControl:hover {
+    background: $primary 20%;
+    color: $text;
+    border: none;
+    border-top: none;
+    border-bottom: none;
+}
+
+DatePicker MonthControl:focus {
+    background: $primary 30%;
+    color: $text;
+    border: none;
+    border-top: none;
+    border-bottom: none;
+}
+
+DatePicker MonthHeader {
+    width: 1fr;
+    height: 3;
+    color: $text;
+    text-style: bold;
+    content-align: center middle;
+    text-align: center;
+}
+
+DatePickerDialog {
+    height: 18;
 }
 
 /* ── Charts ─────────────────────────────────────────── */
