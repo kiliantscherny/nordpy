@@ -16,6 +16,7 @@ from textual.binding import Binding
 from textual.theme import Theme
 from textual.widgets import Footer, Header, LoadingIndicator
 
+from nordpy import __version__
 from nordpy.client import NordnetClient
 from nordpy.http import create_session
 from nordpy.session import SessionManager
@@ -87,7 +88,7 @@ class NordpyApp(App):
         if remaining is None:
             self.sub_title = ""
         elif remaining == 0:
-            self.sub_title = "Session: EXPIRED — press q to quit and re-login"
+            self.sub_title = "Session: EXPIRED — press q to quit and re-login with the '--force-login' flag"
         else:
             mins, secs = divmod(remaining, 60)
             self.sub_title = f"Session: {mins}m {secs:02d}s remaining"
@@ -253,6 +254,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Interactive TUI for browsing and exporting your Nordnet investments data",
         formatter_class=_ColorHelpFormatter,
+    )
+    parser.add_argument(
+        "--version", "-V",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     parser.add_argument("--user", "-u", metavar="", help="MitID username")
     parser.add_argument(
