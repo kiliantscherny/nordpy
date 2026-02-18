@@ -38,3 +38,41 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           skip-existing: true
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract changelog for this version
+        id: changelog
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          # Extract the section for this version from CHANGELOG.md
+          notes=$(awk -v ver="$version" '
+            /^## / {
+              if (found) exit
+              if (index($0, ver)) found=1; next
+            }
+            found { print }
+          ' CHANGELOG.md)
+          echo "$notes" > release_notes.md
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG_NAME" dist/* \
+            --title "$TAG_NAME" \
+            --notes-file release_notes.md
