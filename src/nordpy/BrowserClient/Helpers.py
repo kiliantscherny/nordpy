@@ -1,10 +1,13 @@
 import binascii
 import base64
 import hashlib
+import logging
 import argparse
 from Crypto import Random
 from nordpy.BrowserClient.BrowserClient import BrowserClient
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 # Use this function to add the minimum required args to your login flow
 def get_default_args() -> argparse.ArgumentParser:
@@ -36,7 +39,7 @@ def get_authentication_code(session, aux, method, user_id, password, on_qr_displ
     MitIDClient = BrowserClient(client_hash, authentication_session_id, session, on_qr_display=on_qr_display)
     available_authenticators = MitIDClient.identify_as_user_and_get_available_authenticators(user_id)
 
-    print(f"Available authenticator: {available_authenticators}")
+    logger.info("Available authenticator: %s", available_authenticators)
 
     if method == "TOKEN" and "TOKEN" in available_authenticators:
         token_digits = input("Please input the 6 digits from your code token\n").strip()
@@ -62,10 +65,10 @@ def choose_between_multiple_identitites(session, request, soup):
         except:
             data[soup_input["name"]] = ""
     login_options = soup.select("div.list-link-box")
-    print('You can choose between different identities:\n')
+    logger.info('You can choose between different identities:\n')
     identities = []
     for i, login_option in enumerate(login_options):
-        print(f'{i+1}: {login_option.select_one("div.list-link-text").string}')
+        logger.info('%d: %s', i+1, login_option.select_one("div.list-link-text").string)
         identities.append(i+1)
     identity = input("Enter the identity you want to use:\n").strip()
     try:

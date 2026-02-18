@@ -3,11 +3,13 @@ import time
 import hashlib
 import base64
 import hmac
+import logging
 import qrcode
-import os
 import threading
 import json
 from nordpy.BrowserClient.CustomSRP import CustomSRP, hex_to_bytes, bytes_to_hex, pad
+
+logger = logging.getLogger(__name__)
 
 class BrowserClient():
     def __init__(self, client_hash: str, authentication_session_id: str, requests_session = requests.Session(), on_qr_display=None):
@@ -20,7 +22,7 @@ class BrowserClient():
 
         r = self.session.get(f"https://www.mitid.dk/mitid-core-client-backend/v1/authentication-sessions/{authentication_session_id}")
         if r.status_code != 200:
-            print(f"Failed to get authentication session ({authentication_session_id}), status code {r.status_code}")
+            logger.error("Failed to get authentication session (%s), status code %s", authentication_session_id, r.status_code)
             raise Exception(r.content)
 
         r = r.json()
@@ -29,9 +31,9 @@ class BrowserClient():
         self.service_provider_name = r["serviceProviderName"]
         self.reference_text_header = r["referenceTextHeader"]
         self.reference_text_body = r["referenceTextBody"]
-        print(f"Beginning login session for {self.service_provider_name}:")
-        print(f"{self.reference_text_header}")
-        print(f"{self.reference_text_body}")
+        logger.info("Beginning login session for %s:", self.service_provider_name)
+        logger.info("%s", self.reference_text_header)
+        logger.info("%s", self.reference_text_body)
 
     def __display_qr_ascii(self, stop_event):
         def render_qr(qr):
@@ -45,8 +47,8 @@ class BrowserClient():
                 qr = qr1 if frame else qr2
                 self.on_qr_display(qr.get_matrix())
             else:
-                print("Scan this QR Code in the app:")
-                print(render_qr(qr1) if frame else render_qr(qr2))
+                logger.info("Scan this QR Code in the app:")
+                logger.info(render_qr(qr1) if frame else render_qr(qr2))
             frame = not frame
             stop_event.wait(1)
 
@@ -82,13 +84,13 @@ class BrowserClient():
         r = self.session.put(f"https://www.mitid.dk/mitid-core-client-backend/v1/authentication-sessions/{self.authentication_session_id}", json={"identityClaim": user_id})
 
         if r.status_code != 200:
-            print(f"Received status code ({r.status_code}) while attempting to identify as user ({user_id})")
+            logger.error("Received status code (%s) while attempting to identify as user (%s)", r.status_code, user_id)
             if r.status_code == 400 and r.json()["errorCode"] == "control.identity_not_found":
-                print(f"User '{user_id}' does not exist.")
+                logger.error("User '%s' does not exist.", user_id)
                 raise Exception(r.content)
 
             if r.status_code == 400 and r.json()["errorCode"] == "control.authentication_session_not_found":
-                print("Authentication session not found")
+                logger.error("Authentication session not found")
                 raise Exception(r.content)
 
             raise Exception(r.content)
@@ -96,13 +98,13 @@ class BrowserClient():
         r = self.session.post(f"https://www.mitid.dk/mitid-core-client-backend/v2/authentication-sessions/{self.authentication_session_id}/next", json={"combinationId": ""})
 
         if r.status_code != 200:
-            print(f"Received status code ({r.status_code}) while attempting to get authenticators for user ({user_id})")
+            logger.error("Received status code (%s) while attempting to get authenticators for user (%s)", r.status_code, user_id)
             raise Exception(r.content)
 
         r = r.json()
         if r["errors"] and len(r["errors"]) > 0 and r["errors"][0]["errorCode"] == "control.authenticator_cannot_be_started":
             error_text = r["errors"][0]["userMessage"]["text"]["text"]
-            print(f"Could not get authenticators, got the following error text: {error_text}")
+            logger.error("Could not get authenticators, got the following error text: %s", error_text)
             raise Exception(r)
 
         self.current_authenticator_type = r["nextAuthenticator"]["authenticatorType"]
@@ -133,13 +135,13 @@ class BrowserClient():
         r = self.session.post(f"https://www.mitid.dk/mitid-core-client-backend/v2/authentication-sessions/{self.authentication_session_id}/next", json={"combinationId": combination_id})
 
         if r.status_code != 200:
-            print(f"Received status code ({r.status_code}) while attempting to get authenticators for user ({self.user_id})")
+            logger.error("Received status code (%s) while attempting to get authenticators for user (%s)", r.status_code, self.user_id)
             raise Exception(r.content)
 
         r = r.json()
         if r["errors"] and len(r["errors"]) > 0 and r["errors"][0]["errorCode"] == "control.authenticator_cannot_be_started":
             error_text = r["errors"][0]["userMessage"]["text"]["text"]
-            print(f"Could not get authenticators, got the following error text: {error_text}")
+            logger.error("Could not get authenticators, got the following error text: %s", error_text)
             raise Exception(r.content)
 
         self.current_authenticator_type = r["nextAuthenticator"]["authenticatorType"]
@@ -160,7 +162,7 @@ class BrowserClient():
 
         r = self.session.post(f"https://www.mitid.dk/mitid-code-token-auth/v1/authenticator-sessions/{self.current_authenticator_session_id}/codetoken-init", json={"randomA": {"value": A}})
         if r.status_code != 200:
-            print(f"Failed to init TOTP code protocol, status code {r.status_code}")
+            logger.error("Failed to init TOTP code protocol, status code %s", r.status_code)
             raise Exception(r.content)
 
         timer_2 = time.time()
@@ -186,29 +188,29 @@ class BrowserClient():
 
         r = self.session.post(f"https://www.mitid.dk/mitid-code-token-auth/v1/authenticator-sessions/{self.current_authenticator_session_id}/codetoken-prove", json={"m1": {"value": m1}, "flowValueProof": {"value": flow_value_proof}, "frontEndProcessingTime": front_end_processing_time})
         if r.status_code != 204:
-            print(f"Failed to submit TOTP code, status code {r.status_code}")
+            logger.error("Failed to submit TOTP code, status code %s", r.status_code)
             raise Exception(r.content)
 
         r = self.session.post(f"https://www.mitid.dk/mitid-core-client-backend/v2/authentication-sessions/{self.authentication_session_id}/next", json={"combinationId": ""})
         if r.status_code != 200:
-            print(f"Failed to prove TOTP code, status code {r.status_code}")
+            logger.error("Failed to prove TOTP code, status code %s", r.status_code)
             raise Exception(r.content)
 
         if r.json()["errors"] and len(r.json()["errors"]) > 0 and r.json()["errors"][0]["errorCode"] == "TOTP_INVALID":
             error_text = r.json()["errors"][0]["message"]
-            print(f"Could not log in with the provided TOTP code, got the following message: {error_text}")
+            logger.error("Could not log in with the provided TOTP code, got the following message: %s", error_text)
             raise Exception(r.content)
 
         r = r.json()
         if "nextAuthenticator" not in r or "authenticatorType" not in r["nextAuthenticator"] or r["nextAuthenticator"]["authenticatorType"] != "PASSWORD":
-            print("Ran into an unexpected situation, was expecting to be asked for password after TOTP but got the following response")
+            logger.error("Ran into an unexpected situation, was expecting to be asked for password after TOTP but got the following response")
             raise Exception(r.content)
 
         self.current_authenticator_type = r["nextAuthenticator"]["authenticatorType"]
         self.current_authenticator_session_flow_key = r["nextAuthenticator"]["authenticatorSessionFlowKey"]
         self.current_authenticator_eafe_hash = r["nextAuthenticator"]["eafeHash"]
         self.current_authenticator_session_id = r["nextAuthenticator"]["authenticatorSessionId"]
-        print("Token code accepted, you now need to validate your password")
+        logger.info("Token code accepted, you now need to validate your password")
 
     def authenticate_with_password(self, password: str):
         if self.current_authenticator_type != "PASSWORD":
@@ -221,7 +223,7 @@ class BrowserClient():
 
         r = self.session.post(f"https://www.mitid.dk/mitid-password-auth/v1/authenticator-sessions/{self.current_authenticator_session_id}/init", json={"randomA": {"value": A}})
         if r.status_code != 200:
-            print(f"Failed to init password protocol, status code {r.status_code}")
+            logger.error("Failed to init password protocol, status code %s", r.status_code)
             raise Exception(r.content)
 
         timer_2 = time.time()
@@ -247,48 +249,48 @@ class BrowserClient():
 
         r = self.session.post(f"https://www.mitid.dk/mitid-password-auth/v1/authenticator-sessions/{self.current_authenticator_session_id}/password-prove", json={"m1": {"value": m1}, "flowValueProof": {"value": flow_value_proof}, "frontEndProcessingTime": front_end_processing_time})
         if r.status_code != 204:
-            print(f"Failed to submit password, status code {r.status_code}")
+            logger.error("Failed to submit password, status code %s", r.status_code)
             raise Exception(r.content)
 
         r = self.session.post(f"https://www.mitid.dk/mitid-core-client-backend/v2/authentication-sessions/{self.authentication_session_id}/next", json={"combinationId":""})
         if r.status_code != 200:
-            print(f"Failed to prove password, status code {r.status_code}")
+            logger.error("Failed to prove password, status code %s", r.status_code)
             raise Exception(r.content)
 
         r = r.json()
         if r["errors"] and len(r["errors"]) > 0:
             if r["errors"][0]["errorCode"] == "PASSWORD_INVALID":
                 error_text = r["errors"][0]["message"]
-                print(f"Could not log in with the provided password, got the following message: {error_text}")
+                logger.error("Could not log in with the provided password, got the following message: %s", error_text)
                 raise Exception(r)
             elif r["errors"][0]["errorCode"] == "core.psd2.error":
                 error_text = r["errors"][0]["message"]
-                print(f"Could not log in due to an error, probably due to a wrong password provided. Got the following message: {error_text}")
+                logger.error("Could not log in due to an error, probably due to a wrong password provided. Got the following message: %s", error_text)
                 raise Exception(r)
             else:
                 error_text = r["errors"][0]["message"]
-                print(f"Could not log in due to an unknown error, got the following message: {error_text}")
+                logger.error("Could not log in due to an unknown error, got the following message: %s", error_text)
                 raise Exception(r)
 
         self.finalization_authentication_session_id = r["nextSessionId"]
-        print("Password was accepted, you can now finalize authentication and receive your authorization code")
+        logger.info("Password was accepted, you can now finalize authentication and receive your authorization code")
 
     def authenticate_with_app(self):
         self.__select_authenticator("APP")
 
         r = self.session.post(f"https://www.mitid.dk/mitid-code-app-auth/v1/authenticator-sessions/web/{self.current_authenticator_session_id}/init-auth", json={})
         if r.status_code != 200:
-            print(f"Failed to request app login, status code {r.status_code}")
+            logger.error("Failed to request app login, status code %s", r.status_code)
             raise Exception(r.content)
 
         r = r.json()
         if "errorCode" in r and r["errorCode"] == "auth.codeapp.authentication.parallel_sessions_detected":
-            print("Parallel app sessions detected, only a single app login session can be happening at any one time")
+            logger.error("Parallel app sessions detected, only a single app login session can be happening at any one time")
             raise Exception(r)
 
         poll_url = r["pollUrl"]
         ticket = r["ticket"]
-        print("Login request has been made, open your MitID app now")
+        logger.info("Login request has been made, open your MitID app now")
         qr_stop_event = None
         qr_display_thread = None
         while True:
@@ -298,7 +300,7 @@ class BrowserClient():
                 continue
 
             if r.status_code == 200 and r.json()["status"] == "channel_validation_otp":
-                print(f"Please use the following OTP code in the app: {r.json()['channelBindingValue']}")
+                logger.info("Please use the following OTP code in the app: %s", r.json()['channelBindingValue'])
                 continue
 
             if r.status_code == 200 and r.json()["status"] == "channel_validation_tqr":
@@ -333,14 +335,14 @@ class BrowserClient():
                 if qr_display_thread and qr_display_thread.is_alive():
                     qr_stop_event.set()
                     qr_display_thread.join()
-                print("The OTP/QR code has been verified, now waiting user to approve login")
+                logger.info("The OTP/QR code has been verified, now waiting user to approve login")
                 continue
 
             if not (r.status_code == 200 and r.json()["status"] == "OK" and r.json()["confirmation"] == True):
                 if qr_display_thread and qr_display_thread.is_alive():
                     qr_stop_event.set()
                     qr_display_thread.join()
-                print("Login request was not accepted")
+                logger.error("Login request was not accepted")
                 raise Exception(r.content)
 
             break
@@ -356,7 +358,7 @@ class BrowserClient():
 
         r = self.session.post(f"https://www.mitid.dk/mitid-code-app-auth/v1/authenticator-sessions/web/{self.current_authenticator_session_id}/init", json={"randomA": {"value": A}})
         if r.status_code != 200:
-            print(f"Failed to init app protocol, status code {r.status_code}")
+            logger.error("Failed to init app protocol, status code %s", r.status_code)
             raise Exception(r.content)
 
         timer_2 = time.time()
@@ -381,7 +383,7 @@ class BrowserClient():
 
         r = self.session.post(f"https://www.mitid.dk/mitid-code-app-auth/v1/authenticator-sessions/web/{self.current_authenticator_session_id}/prove", json={"m1": {"value": m1}, "flowValueProof": {"value": flow_value_proof}})
         if r.status_code != 200:
-            print(f"Failed to submit app response proof, status code {r.status_code}")
+            logger.error("Failed to submit app response proof, status code %s", r.status_code)
             raise Exception(r.content)
 
         timer_3 = time.time()
@@ -395,21 +397,21 @@ class BrowserClient():
 
         r = self.session.post(f"https://www.mitid.dk/mitid-code-app-auth/v1/authenticator-sessions/web/{self.current_authenticator_session_id}/verify", json={"encAuth": auth_enc, "frontEndProcessingTime": front_end_processing_time})
         if r.status_code != 204:
-            print(f"Failed to verify app response signature, status code {r.status_code}")
+            logger.error("Failed to verify app response signature, status code %s", r.status_code)
             raise Exception(r.content)
 
         r = self.session.post(f"https://www.mitid.dk/mitid-core-client-backend/v2/authentication-sessions/{self.authentication_session_id}/next", json={"combinationId":""})
         if r.status_code != 200:
-            print(f"Failed to prove app login, status code {r.status_code}")
+            logger.error("Failed to prove app login, status code %s", r.status_code)
             raise Exception(r.content)
 
         r = r.json()
         if r["errors"] and len(r["errors"]) > 0:
-            print("Could not prove the app login")
+            logger.error("Could not prove the app login")
             raise Exception(r)
 
         self.finalization_authentication_session_id = r["nextSessionId"]
-        print("App login was accepted, you can now finalize authentication and receive your authorization code")
+        logger.info("App login was accepted, you can now finalize authentication and receive your authorization code")
 
     def finalize_authentication_and_get_authorization_code(self):
         if not self.finalization_authentication_session_id:
@@ -417,7 +419,7 @@ class BrowserClient():
 
         r = self.session.put(f"https://www.mitid.dk/mitid-core-client-backend/v1/authentication-sessions/{self.finalization_authentication_session_id}/finalization")
         if r.status_code != 200:
-            print(f"Failed to retrieve authorization code, status code {r.status_code}")
+            logger.error("Failed to retrieve authorization code, status code %s", r.status_code)
             raise Exception(r.content)
 
         return r.json()["authorizationCode"]

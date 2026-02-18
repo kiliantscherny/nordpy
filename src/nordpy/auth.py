@@ -123,6 +123,29 @@ class AuthManager:
                 response = session.get(
                     location, allow_redirects=False, timeout=30
                 )
+
+                # SAML Artifact Binding: the target endpoint may reject
+                # GET with 406 and require POST instead.  Re-send the
+                # query parameters as POST form data.
+                if response.status_code == 406:
+                    loc_parsed_for_post = urlparse(location)
+                    post_params = parse_qs(loc_parsed_for_post.query)
+                    # flatten single-value lists produced by parse_qs
+                    flat_params = {k: v[0] if len(v) == 1 else v for k, v in post_params.items()}
+                    base_url_for_post = location.split("?")[0]
+                    logger.info(
+                        "Redirect hop {}: GET returned 406, retrying as POST to {} (fields={})",
+                        hop + 1,
+                        base_url_for_post,
+                        list(flat_params.keys()),
+                    )
+                    response = session.post(
+                        base_url_for_post,
+                        data=flat_params,
+                        allow_redirects=False,
+                        timeout=30,
+                    )
+
                 continue
 
             # ── Check if this is a loaded page with code in URL ──
@@ -141,38 +164,44 @@ class AuthManager:
             if response.status_code == 200 and response.text:
                 soup = BeautifulSoup(response.text, "lxml")
                 form = soup.find("form")
+                if not isinstance(form, Tag):
+                    # Retry with html.parser in case lxml chokes on the markup
+                    soup = BeautifulSoup(response.text, "html.parser")
+                    form = soup.find("form")
                 if isinstance(form, Tag):
-                    action = str(form.get("action", ""))
-                    if action:
-                        fields: dict[str, str] = {}
-                        for inp in form.find_all("input"):
-                            name = inp.get("name")
-                            if name:
-                                fields[str(name)] = str(inp.get("value", ""))
+                    # Resolve action: empty/missing means current URL
+                    raw_action = str(form.get("action", ""))
+                    action = urljoin(str(response.url), raw_action) if raw_action else str(response.url)
 
-                        method = str(form.get("method", "GET")).upper()
-                        logger.info(
-                            "SAML form hop {}: {} {} (fields={})",
-                            hop + 1,
-                            method,
+                    fields: dict[str, str] = {}
+                    for inp in form.find_all("input"):
+                        name = inp.get("name")
+                        if name:
+                            fields[str(name)] = str(inp.get("value", ""))
+
+                    method = str(form.get("method", "GET")).upper()
+                    logger.info(
+                        "SAML form hop {}: {} {} (fields={})",
+                        hop + 1,
+                        method,
+                        action,
+                        list(fields.keys()),
+                    )
+                    if method == "POST":
+                        response = session.post(
                             action,
-                            list(fields.keys()),
+                            data=fields,
+                            allow_redirects=False,
+                            timeout=30,
                         )
-                        if method == "POST":
-                            response = session.post(
-                                action,
-                                data=fields,
-                                allow_redirects=False,
-                                timeout=30,
-                            )
-                        else:
-                            response = session.get(
-                                action,
-                                params=fields,
-                                allow_redirects=False,
-                                timeout=30,
-                            )
-                        continue
+                    else:
+                        response = session.get(
+                            action,
+                            params=fields,
+                            allow_redirects=False,
+                            timeout=30,
+                        )
+                    continue
 
             # No redirect, no form, no code — give up
             logger.error(
@@ -219,13 +248,13 @@ class AuthManager:
         logger.debug(
             "Step 0 response: status={}, cookies={}",
             pre_resp.status_code,
-            _cookies_to_dict(session),
+            list(_cookies_to_dict(session).keys()),
         )
         # Extract the page-embedded CSRF token (may differ from _csrf cookie)
         pre_soup = BeautifulSoup(pre_resp.text, "lxml")
         csrf_script = pre_soup.find("script", attrs={"data-csrf": True})
         page_csrf_token = str(csrf_script["data-csrf"]) if csrf_script else None
-        logger.debug("Step 0: page data-csrf={}", page_csrf_token)
+        logger.debug("Step 0: page data-csrf={}", page_csrf_token[:8] + "..." if page_csrf_token else None)
 
         # Set cookies normally created by client-side JavaScript.
         # The browser has these but HttpSession doesn't (no JS engine).
@@ -279,16 +308,14 @@ class AuthManager:
 
         start_url = "https://api.prod.nntech.io/authentication/v2/methods/signicat/start"
         logger.info("Step 0.5: POST signicatStart: {}", start_url)
-        logger.debug("Step 0.5 body ({} bytes): {}", len(start_body), start_body)
-        logger.debug("Step 0.5 headers: {}", start_headers)
+        logger.debug("Step 0.5 body ({} bytes)", len(start_body))
+        logger.debug("Step 0.5 headers: {}", list(start_headers.keys()))
         start_resp = session.post(
             start_url, data=start_body, headers=start_headers, timeout=30,
         )
         logger.debug(
-            "Step 0.5 response: status={}, headers={}, body={}",
+            "Step 0.5 response: status={}",
             start_resp.status_code,
-            dict(start_resp.headers),
-            start_resp.text[:500],
         )
 
         login_url = None
@@ -396,7 +423,7 @@ class AuthManager:
             headers=headers,
             timeout=30,
         )
-        logger.debug("Step 5 response: status={}, body={}", resp_auth_code.status_code, resp_auth_code.text[:500])
+        logger.debug("Step 5 response: status={}", resp_auth_code.status_code)
 
         finalize_auth_url = base_url + str(nxt["data-finalize-auth-path"])
         logger.info("Step 6: GET finalize-auth (no auto-redirect): {}", finalize_auth_url)
@@ -434,7 +461,7 @@ class AuthManager:
             logger.info("Step 7a: POST CPR verify: {}", verify_url)
             cpr_payload = {"cpr": cpr_number, "remember": "false"}
             request = session.post(verify_url, data=cpr_payload, timeout=30)
-            logger.debug("Step 7a response: status={}, body={}", request.status_code, request.text[:500])
+            logger.debug("Step 7a response: status={}", request.status_code)
 
             if request.status_code != 200 or '"success":false' in request.text:
                 raise AuthError(f"CPR verification failed: {request.text}")
@@ -451,7 +478,7 @@ class AuthManager:
         _status("Completing authentication...")
         code = self._follow_redirects_to_code(session, request)
         logger.info("Step 8: Intercepted OIDC code (len={})", len(code))
-        logger.debug("After redirect interception — cookies: {}", _cookies_to_dict(session))
+        logger.debug("After redirect interception — cookies: {}", list(_cookies_to_dict(session).keys()))
 
         # Step 8.5: Refresh cookies by loading /logind (without the code param).
         # The browser loads nordnet.dk/logind?code=... and the page sets fresh
@@ -462,7 +489,7 @@ class AuthManager:
         logger.debug(
             "Step 8.5 response: status={}, cookies={}",
             refresh_resp.status_code,
-            _cookies_to_dict(session),
+            list(_cookies_to_dict(session).keys()),
         )
 
         payload_json = {
@@ -490,29 +517,25 @@ class AuthManager:
         session.headers["sec-fetch-dest"] = "empty"
         session.headers["dnt"] = "1"
         logger.debug(
-            "Step 9: _csrf cookie={}",
-            _cookies_to_dict(session),
+            "Step 9: cookies={}",
+            list(_cookies_to_dict(session).keys()),
         )
 
         body_bytes = json.dumps(payload_json, separators=(",", ":"))
         logger.info("Step 9: POST /nnxapi/authentication/v2/sessions")
-        logger.debug("Step 9 payload ({} bytes): {}", len(body_bytes), body_bytes)
-        logger.debug("Step 9 cookies: {}", _cookies_to_dict(session))
-        logger.debug("Step 9 headers: {}", {k: v for k, v in session.headers.items()})
+        logger.debug("Step 9 payload ({} bytes)", len(body_bytes))
         request = session.post(
             "https://www.nordnet.dk/nnxapi/authentication/v2/sessions",
             data=body_bytes,
             timeout=30,
         )
         logger.debug(
-            "Step 9 response: status={}, headers={}, body={}",
+            "Step 9 response: status={}",
             request.status_code,
-            dict(request.headers),
-            request.text[:1000],
         )
         if request.status_code != 200:
             logger.error(
-                "Sessions endpoint failed! status={}, body={}", request.status_code, request.text
+                "Sessions endpoint failed! status={}", request.status_code
             )
             raise AuthError(f"Sessions failed: {request.status_code}")
 
@@ -522,9 +545,9 @@ class AuthManager:
             json={},
             timeout=30,
         )
-        logger.debug("Step 10 response: status={}, body={}", request.status_code, request.text[:500])
+        logger.debug("Step 10 response: status={}", request.status_code)
         if request.status_code != 200:
-            logger.error("Login failed! status={}, body={}", request.status_code, request.text)
+            logger.error("Login failed! status={}", request.status_code)
             raise AuthError(f"Login failed: {request.status_code}")
 
         session.headers["ntag"] = request.headers["ntag"]

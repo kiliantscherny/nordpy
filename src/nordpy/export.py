@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from collections.abc import Sequence
 from datetime import date, datetime
 from pathlib import Path
@@ -181,14 +182,14 @@ def export_duckdb(
         for i, header in enumerate(headers):
             sample = rows[0][i] if i < len(rows[0]) else None
             sql_type = _python_to_sql_type(sample)
-            safe_name = header.replace(" ", "_").replace("/", "_")
+            safe_name = re.sub(r"[^\w]", "_", header)
             col_defs.append(f'"{safe_name}" {sql_type}')
     else:
         for header in headers:
-            safe_name = header.replace(" ", "_").replace("/", "_")
+            safe_name = re.sub(r"[^\w]", "_", header)
             col_defs.append(f'"{safe_name}" TEXT')
 
-    table_name = entity_name.replace(" ", "_").replace("-", "_")
+    table_name = re.sub(r"[^\w]", "_", entity_name)
     create_sql = f'CREATE TABLE "{table_name}" ({", ".join(col_defs)})'
     con.execute(create_sql)
 
