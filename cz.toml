@@ -4,8 +4,8 @@ version = "1.1.0"
 version_provider = "commitizen"
 version_scheme = "pep440"
 version_files = [
-    "src/__version__.py",
-    "pyproject.toml:version"
+    "pyproject.toml:^version",
+    "src/nordpy/__init__.py:^__version__",
 ]
 tag_format = "v$version"
 update_changelog_on_bump = true
