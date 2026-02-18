@@ -141,11 +141,11 @@ class AccountsScreen(Screen):
                     setattr, self.query_one("#accounts-loading"), "display", False
                 )
 
-    def _populate_cards(self) -> None:
+    async def _populate_cards(self) -> None:
         """Build account cards (must run on main thread)."""
         container = self.query_one("#accounts-container", VerticalScroll)
         empty_msg = self.query_one("#empty-msg", Static)
-        container.remove_children()
+        await container.remove_children()
 
         if not self._accounts:
             empty_msg.update("No accounts found.")
