@@ -13,9 +13,7 @@ commands = [["ruff", "check", "."]]
 
 [env.typecheck]
 description = "Run ty type checker"
-# Pin ty (pre-1.0, fast-moving) for reproducible CI — matches the
-# version `uv run ty check` uses locally. Unpinned, tox floated to a
-# newer, stricter ty and flagged pre-existing latent issues unrelated
-# to current work. Bump deliberately, fixing any new findings.
-deps = ["ty==0.0.16"]
+# Pin ty (pre-1.0, fast-moving) for reproducible CI. Bump deliberately
+# and fix any new findings (errors fail; warnings are non-fatal).
+deps = ["ty==0.0.37"]
 commands = [["ty", "check"]]
