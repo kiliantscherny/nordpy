@@ -115,8 +115,10 @@ class AccountsScreen(Screen):
                     pass
                 try:
                     holdings = self.client.get_holdings(acc.accid)
+                    # Sum in the account's base currency, never raw mixed
+                    # per-instrument currencies (EUR ETF + DKK ETF, etc.).
                     holdings_values[acc.accid] = sum(
-                        h.market_value.value for h in holdings
+                        h.value_in_account_currency for h in holdings
                     )
                 except NordnetAPIError:
                     pass

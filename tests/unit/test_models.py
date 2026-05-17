@@ -193,6 +193,69 @@ class TestHolding:
         assert h.acq_price.value == 0
         assert h.market_value.value == 0
 
+    def test_parses_account_currency_fields(self):
+        """Nordnet positions include *_acc fields in the account's currency."""
+        h = Holding.model_validate(
+            {
+                "instrument": {"name": "EUR ETF"},
+                "qty": 1.0,
+                "acq_price": {"value": 90.0, "currency": "EUR"},
+                "market_value": {"value": 100.0, "currency": "EUR"},
+                "acq_price_acc": {"value": 671.0, "currency": "DKK"},
+                "market_value_acc": {"value": 746.0, "currency": "DKK"},
+            }
+        )
+        assert h.market_value_acc.value == 746.0
+        assert h.market_value_acc.currency == "DKK"
+        assert h.acq_price_acc.value == 671.0
+
+    def test_value_in_account_currency_prefers_acc_field(self):
+        """When market_value_acc is present, it is the account-currency value."""
+        h = Holding.model_validate(
+            {
+                "instrument": {"name": "EUR ETF"},
+                "qty": 1.0,
+                "acq_price": {"value": 90.0, "currency": "EUR"},
+                "market_value": {"value": 100.0, "currency": "EUR"},
+                "market_value_acc": {"value": 746.0, "currency": "DKK"},
+            }
+        )
+        assert h.value_in_account_currency == 746.0
+
+    def test_value_in_account_currency_falls_back_to_market_value(self):
+        """If the API omits market_value_acc, fall back to market_value."""
+        h = Holding.model_validate(
+            {
+                "instrument": {"name": "DKK ETF"},
+                "qty": 1.0,
+                "acq_price": {"value": 90.0, "currency": "DKK"},
+                "market_value": {"value": 120.0, "currency": "DKK"},
+            }
+        )
+        assert h.value_in_account_currency == 120.0
+
+    def test_has_account_currency_value(self):
+        """Reports whether the account-currency figure came from the API."""
+        with_acc = Holding.model_validate(
+            {
+                "instrument": {"name": "EUR ETF"},
+                "qty": 1.0,
+                "acq_price": {"value": 90.0, "currency": "EUR"},
+                "market_value": {"value": 100.0, "currency": "EUR"},
+                "market_value_acc": {"value": 746.0, "currency": "DKK"},
+            }
+        )
+        without_acc = Holding.model_validate(
+            {
+                "instrument": {"name": "EUR ETF"},
+                "qty": 1.0,
+                "acq_price": {"value": 90.0, "currency": "EUR"},
+                "market_value": {"value": 100.0, "currency": "EUR"},
+            }
+        )
+        assert with_acc.has_account_currency_value is True
+        assert without_acc.has_account_currency_value is False
+
 
 # ── Transaction ──
 

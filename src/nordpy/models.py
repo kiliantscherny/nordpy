@@ -93,21 +93,58 @@ class AccountBalance(BaseModel):
 
 
 class Holding(BaseModel):
-    """A position (security holding) in an account."""
+    """A position (security holding) in an account.
+
+    Nordnet's positions endpoint reports money twice: ``acq_price`` /
+    ``market_value`` in the instrument's own trading currency, and
+    ``acq_price_acc`` / ``market_value_acc`` already converted to the
+    account's base currency. The ``_acc`` variants are what should be
+    summed across a multi-currency account.
+    """
 
     instrument: Instrument
     quantity: float = Field(alias="qty")
     acq_price: MoneyAmount
     market_value: MoneyAmount
+    acq_price_acc: MoneyAmount = Field(
+        default_factory=lambda: MoneyAmount(value=0.0, currency="")
+    )
+    market_value_acc: MoneyAmount = Field(
+        default_factory=lambda: MoneyAmount(value=0.0, currency="")
+    )
 
     model_config = {"populate_by_name": True}
 
-    @field_validator("acq_price", "market_value", mode="before")
+    @field_validator(
+        "acq_price", "market_value", "acq_price_acc", "market_value_acc", mode="before"
+    )
     @classmethod
     def _parse_money(cls, v: object) -> object:
         if isinstance(v, dict):
             return v
         return {"value": 0, "currency": ""}
+
+    @property
+    def has_account_currency_value(self) -> bool:
+        """True when the API supplied an account-currency conversion.
+
+        When False, ``value_in_account_currency`` is a same-currency
+        fallback to ``market_value`` and is only trustworthy if the
+        instrument already trades in the account's base currency.
+        """
+        return bool(self.market_value_acc.currency)
+
+    @property
+    def value_in_account_currency(self) -> float:
+        """Market value in the account's base currency.
+
+        Prefers the API's account-currency figure (``market_value_acc``);
+        falls back to the raw ``market_value`` when the API omits it (e.g.
+        single-currency accounts where no conversion is needed).
+        """
+        if self.has_account_currency_value:
+            return self.market_value_acc.value
+        return self.market_value.value
 
     @property
     def gain_loss(self) -> float:
