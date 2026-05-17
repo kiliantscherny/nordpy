@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="nordpy-logo.png" alt="nordpy" width="200" />
+  <img src="static/nordpy-logo.png" alt="nordpy" width="200" />
 </p>
 
 <h1 align="center">nordpy</h1>
@@ -48,6 +48,43 @@ nordpy authenticates with Nordnet through the same MitID flow your browser uses 
 
 > [!IMPORTANT]
 > **Privacy** – nordpy does **not** collect, transmit, or store any of your personal information. Your credentials are sent directly to MitID and Nordnet – never to any third-party server. Session cookies are saved locally on your machine (with `0600` permissions) solely to avoid repeated logins. No telemetry, analytics, or external services are involved.
+
+### Using <code>nordpy</code> (step by step with screenshots)
+<figure>
+  <figcaption>Sign in with your MitID username</figcaption>
+  <img src="static/1.png" alt="Step 1" style="width:100%">
+</figure>
+
+<figure>
+  <figcaption>Approve the login on your MitID app, then enter your CPR number if prompted</figcaption>
+  <img src="static/2.png" alt="Step 2" style="width:100%">
+</figure>
+
+<figure>
+  <figcaption>If you have authorized correctly, you will see a confirmation message</figcaption>
+  <img src="static/3.png" alt="Step 3" style="width:100%">
+</figure>
+
+<figure>
+  <figcaption>You are now logged in and will see your list of accounts</figcaption>
+  <img src="static/4.png" alt="Step 4" style="width:100%">
+</figure>
+
+<figure>
+  <figcaption>Select an account to view its holdings</figcaption>
+  <img src="static/5.png" alt="Step 5" style="width:100%">
+</figure>
+
+<figure>
+  <figcaption>View the transactions for the selected account</figcaption>
+  <img src="static/6.png" alt="Step 6" style="width:100%">
+</figure>
+
+<figure>
+  <figcaption>See the price history for the selected instrument in your holdings</figcaption>
+  <img src="static/7.png" alt="Step 7" style="width:100%">
+</figure>
+
 
 ## Requirements
 
