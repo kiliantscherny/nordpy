@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 
@@ -289,10 +290,10 @@ class InstrumentType(BaseModel):
 
     @field_validator("type_id", mode="before")
     @classmethod
-    def _coerce_type_id(cls, v: object) -> int:
+    def _coerce_type_id(cls, v: object) -> Any:
         if isinstance(v, str):
             return int(v)
-        return v  # type: ignore[return-value]
+        return v
 
 
 class Market(BaseModel):
@@ -308,10 +309,10 @@ class Market(BaseModel):
 
     @field_validator("market_id", mode="before")
     @classmethod
-    def _coerce_market_id(cls, v: object) -> int:
+    def _coerce_market_id(cls, v: object) -> Any:
         if isinstance(v, str):
             return int(v)
-        return v  # type: ignore[return-value]
+        return v
 
 
 class NewsSource(BaseModel):
@@ -325,10 +326,10 @@ class NewsSource(BaseModel):
 
     @field_validator("source_id", mode="before")
     @classmethod
-    def _coerce_source_id(cls, v: object) -> int:
+    def _coerce_source_id(cls, v: object) -> Any:
         if isinstance(v, str):
             return int(v)
-        return v  # type: ignore[return-value]
+        return v
 
 
 # ── Search result models ──
@@ -351,10 +352,10 @@ class InstrumentSearchResult(BaseModel):
 
     @field_validator("instrument_id", mode="before")
     @classmethod
-    def _coerce_instrument_id(cls, v: object) -> int:
+    def _coerce_instrument_id(cls, v: object) -> Any:
         if isinstance(v, str):
             return int(v)
-        return v  # type: ignore[return-value]
+        return v
 
     @field_validator("last_price", mode="before")
     @classmethod
@@ -396,12 +397,12 @@ class MainSearchResult(BaseModel):
 
     @field_validator("instrument_id", mode="before")
     @classmethod
-    def _coerce_instrument_id(cls, v: object) -> int | None:
+    def _coerce_instrument_id(cls, v: object) -> Any:
         if v is None:
             return None
         if isinstance(v, str):
             return int(v)
-        return v  # type: ignore[return-value]
+        return v
 
 
 # ── Enhanced account info ──
