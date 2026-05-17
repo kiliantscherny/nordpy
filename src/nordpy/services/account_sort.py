@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel
@@ -10,8 +10,12 @@ from pydantic import BaseModel
 from nordpy.models import Account, AccountInfo
 
 
-class SortField(StrEnum):
-    """Field an account list can be ordered by."""
+class SortField(str, Enum):
+    """Field an account list can be ordered by.
+
+    ``str`` mixin (not ``enum.StrEnum``) keeps Python 3.10 support;
+    ``.value`` still yields the plain string used by the UI.
+    """
 
     TOTAL = "total"
     HOLDINGS = "holdings"
