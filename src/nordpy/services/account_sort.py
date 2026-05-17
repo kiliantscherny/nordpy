@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -47,3 +48,34 @@ def account_total(
     if info.own_capital is not None:
         return info.own_capital.value
     return info.account_sum.value + holdings_value
+
+
+def sort_accounts(
+    accounts: list[Account],
+    infos: dict[int, AccountInfo],
+    holdings_values: dict[int, float],
+    spec: SortSpec,
+) -> list[Account]:
+    """Return a new list of ``accounts`` ordered per ``spec``.
+
+    Stable: accounts with equal sort keys keep their original input
+    order in both directions (Python's sort reverses the comparison,
+    not the run of equal elements), giving a deterministic tiebreaker.
+    Does not mutate ``accounts``.
+    """
+
+    def key(acc: Account) -> Any:
+        info = infos.get(acc.accid)
+        if spec.field is SortField.TOTAL:
+            return account_total(acc, info, holdings_values.get(acc.accid, 0.0))
+        if spec.field is SortField.HOLDINGS:
+            return holdings_values.get(acc.accid, 0.0)
+        if spec.field is SortField.CASH:
+            return info.account_sum.value if info else 0.0
+        if spec.field is SortField.NAME:
+            return acc.display_name.casefold()
+        if spec.field is SortField.TYPE:
+            return acc.type.casefold()
+        return int(acc.accno)  # SortField.ACCNO
+
+    return sorted(accounts, key=key, reverse=spec.descending)

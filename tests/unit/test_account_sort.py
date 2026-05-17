@@ -8,6 +8,7 @@ from nordpy.services.account_sort import (
     SortField,
     SortSpec,
     account_total,
+    sort_accounts,
 )
 
 
@@ -45,3 +46,60 @@ class TestAccountTotal:
 class TestDefaultSort:
     def test_default_is_total_descending(self):
         assert DEFAULT_SORT == SortSpec(field=SortField.TOTAL, descending=True)
+
+
+class TestSortAccounts:
+    def _setup(self):
+        a1 = _acc(1, accno="300", type="ASK", alias="Zeta")
+        a2 = _acc(2, accno="100", type="ISK", alias="alpha")
+        a3 = _acc(3, accno="200", type="ASK", alias="Beta")
+        accounts = [a1, a2, a3]
+        infos = {
+            1: _info(1, cash=0.0, own_capital=1000.0),
+            2: _info(2, cash=0.0, own_capital=3000.0),
+            3: _info(3, cash=0.0, own_capital=2000.0),
+        }
+        holdings = {1: 0.0, 2: 0.0, 3: 0.0}
+        return accounts, infos, holdings
+
+    def test_total_descending_is_default_order(self):
+        accounts, infos, holdings = self._setup()
+        out = sort_accounts(accounts, infos, holdings, DEFAULT_SORT)
+        assert [a.accid for a in out] == [2, 3, 1]  # 3000, 2000, 1000
+
+    def test_total_ascending(self):
+        accounts, infos, holdings = self._setup()
+        spec = SortSpec(field=SortField.TOTAL, descending=False)
+        out = sort_accounts(accounts, infos, holdings, spec)
+        assert [a.accid for a in out] == [1, 3, 2]
+
+    def test_name_is_case_insensitive(self):
+        accounts, infos, holdings = self._setup()
+        spec = SortSpec(field=SortField.NAME, descending=False)
+        out = sort_accounts(accounts, infos, holdings, spec)
+        assert [a.display_name for a in out] == ["alpha", "Beta", "Zeta"]
+
+    def test_accno_is_numeric(self):
+        accounts, infos, holdings = self._setup()
+        spec = SortSpec(field=SortField.ACCNO, descending=False)
+        out = sort_accounts(accounts, infos, holdings, spec)
+        assert [a.accno for a in out] == ["100", "200", "300"]
+
+    def test_type_sort_stable_within_ties(self):
+        accounts, infos, holdings = self._setup()
+        spec = SortSpec(field=SortField.TYPE, descending=False)
+        out = sort_accounts(accounts, infos, holdings, spec)
+        # "ASK","ASK","ISK"; equal ASK keeps input order (a1 before a3)
+        assert [a.accid for a in out] == [1, 3, 2]
+
+    def test_stable_tiebreaker_preserves_input_order(self):
+        accounts, infos, holdings = self._setup()
+        spec = SortSpec(field=SortField.HOLDINGS, descending=True)
+        out = sort_accounts(accounts, infos, holdings, spec)
+        assert [a.accid for a in out] == [1, 2, 3]
+
+    def test_does_not_mutate_input(self):
+        accounts, infos, holdings = self._setup()
+        original = list(accounts)
+        sort_accounts(accounts, infos, holdings, DEFAULT_SORT)
+        assert accounts == original
