@@ -42,4 +42,8 @@ jobs:
         run: uvx ruff check .
 
       - name: Type check
-        run: uvx ty check
+        # Pin ty (pre-1.0, fast-moving) for reproducible CI — matches
+        # tox.toml and the version `uv run ty check` uses locally.
+        # Unpinned, uvx floated to a newer, stricter ty that flagged
+        # pre-existing latent issues unrelated to current work.
+        run: uvx ty@0.0.16 check
