@@ -25,6 +25,21 @@
 - **Major-developments-in-the-app-including-creation-of-a-TUI-for-accessing-Nordnet-data,-unit-testing,-and-Pydantic-validation-of-API-responses**: create tui for nordpy
 - initial commit
 
+## v1.3.0 (2026-05-17)
+
+### Feat
+
+- **accounts**: sort accounts by total (default) with sort dialog
+- **accounts**: add AccountSortDialog modal
+- **accounts**: add stable sort_accounts ordering function
+- **accounts**: add SortField/SortSpec and account_total
+
+### Fix
+
+- **models**: type before-validators as Any to satisfy ty
+- **accounts**: use str/Enum mixin so SortField works on Python 3.10
+- **accounts**: sum holdings in account currency for mixed-currency accounts
+
 ## v1.2.0 (2026-02-18)
 
 ### Feat
