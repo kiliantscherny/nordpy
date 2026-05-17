@@ -49,6 +49,13 @@ nordpy authenticates with Nordnet through the same MitID flow your browser uses 
 > [!IMPORTANT]
 > **Privacy** – nordpy does **not** collect, transmit, or store any of your personal information. Your credentials are sent directly to MitID and Nordnet – never to any third-party server. Session cookies are saved locally on your machine (with `0600` permissions) solely to avoid repeated logins. No telemetry, analytics, or external services are involved.
 
+### Quickstart
+
+```bash
+# Run with Python 3.10–3.13 and replace <your-mitid-username> with your MitID username
+uvx --python 3.13 nordpy --user <your-mitid-username>
+```
+
 ### Using <code>nordpy</code> (step by step with screenshots)
 <figure>
   <figcaption>Sign in with your MitID username</figcaption>
