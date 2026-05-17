@@ -15,6 +15,8 @@ from textual.worker import get_current_worker
 from nordpy.client import NordnetAPIError, NordnetClient
 from nordpy.http import HttpSession
 from nordpy.models import Account, AccountInfo
+from nordpy.services.account_sort import DEFAULT_SORT, SortSpec, sort_accounts
+from nordpy.widgets.account_sort_dialog import AccountSortDialog
 
 
 class AccountCard(Vertical, can_focus=True):
@@ -64,6 +66,7 @@ class AccountsScreen(Screen):
     BINDINGS = [
         Binding("escape", "app.quit", "Quit"),
         Binding("r", "refresh", "Refresh"),
+        Binding("s", "sort", "Sort"),
     ]
 
     def __init__(
@@ -77,6 +80,7 @@ class AccountsScreen(Screen):
         self._accounts: list[Account] = []
         self._account_infos: dict[int, AccountInfo] = {}
         self._holdings_values: dict[int, float] = {}
+        self._sort_spec: SortSpec = DEFAULT_SORT
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -115,8 +119,10 @@ class AccountsScreen(Screen):
                     pass
                 try:
                     holdings = self.client.get_holdings(acc.accid)
+                    # Sum in the account's base currency, never raw mixed
+                    # per-instrument currencies (EUR ETF + DKK ETF, etc.).
                     holdings_values[acc.accid] = sum(
-                        h.market_value.value for h in holdings
+                        h.value_in_account_currency for h in holdings
                     )
                 except NordnetAPIError:
                     pass
@@ -156,7 +162,15 @@ class AccountsScreen(Screen):
         empty_msg.display = False
         container.display = True
 
-        for acc in self._accounts:
+        ordered = sort_accounts(
+            self._accounts,
+            self._account_infos,
+            self._holdings_values,
+            self._sort_spec,
+        )
+        arrow = "↓" if self._sort_spec.descending else "↑"
+        self.sub_title = f"Sorted by {self._sort_spec.field.value} {arrow}"
+        for acc in ordered:
             card = AccountCard(acc, acc.accid)
             container.mount(card)
 
@@ -210,3 +224,16 @@ class AccountsScreen(Screen):
 
     def action_refresh(self) -> None:
         self._load_accounts()
+
+    def action_sort(self) -> None:
+        """Open the sort dialog; re-order cards when the user applies."""
+        self.app.push_screen(
+            AccountSortDialog(self._sort_spec), self._on_sort_changed
+        )
+
+    def _on_sort_changed(self, spec: SortSpec | None) -> None:
+        """Apply a new sort to the already-loaded accounts (no refetch)."""
+        if spec is None:
+            return
+        self._sort_spec = spec
+        self.call_later(self._populate_cards)

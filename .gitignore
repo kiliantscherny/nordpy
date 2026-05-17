@@ -12,6 +12,7 @@ specs/
 # Claude
 .claude/
 CLAUDE.md
+docs/
 
 # Python
 __pycache__/

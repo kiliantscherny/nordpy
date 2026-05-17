@@ -42,4 +42,6 @@ jobs:
         run: uvx ruff check .
 
       - name: Type check
-        run: uvx ty check
+        # Pin ty (pre-1.0, fast-moving) for reproducible CI; matches
+        # tox.toml. Bump deliberately and fix any new findings.
+        run: uvx ty@0.0.37 check
