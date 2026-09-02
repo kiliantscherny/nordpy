@@ -15,6 +15,20 @@ jobs:
         with:
           python-version: "3.13"
 
+      # A tag that disagrees with pyproject.toml publishes the wrong version
+      # under the right name, and PyPI does not let you take that back.
+      - name: Check the tag against the version
+        run: |
+          tagged="${GITHUB_REF_NAME#v}"
+          declared="$(uv version --short)"
+          if [ "$tagged" != "$declared" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match version $declared in pyproject.toml"
+            exit 1
+          fi
+
+      - run: uv sync
+      - run: uv run pytest
+
       - name: Build package
         run: uv build
 
@@ -35,12 +49,21 @@ jobs:
           name: dist
           path: dist/
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: astral-sh/setup-uv@v6
         with:
-          skip-existing: true
+          python-version: "3.13"
+          # This job installs nothing, so there is no cache to save, and
+          # setup-uv's post step fails the job for finding none.
+          enable-cache: false
+      # No API token anywhere: --trusted-publishing exchanges this job's
+      # short-lived OIDC identity for an upload token scoped to this project.
+      # --check-url makes a re-run a no-op rather than a duplicate upload.
+      - run: uv publish --trusted-publishing always --check-url https://pypi.org/simple/nordpy/
 
   github-release:
-    needs: build
+    # Only once PyPI has it. A GitHub release for a version nobody can install
+    # is worse than no release at all.
+    needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
