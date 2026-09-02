@@ -39,7 +39,7 @@ src/nordpy/
 ├── export.py               # CSV, XLSX, and DuckDB exporters
 ├── http.py                 # HTTP session factory
 ├── models.py               # Pydantic models for API responses
-├── session.py              # Session persistence (.nordnet_session.json)
+├── session.py              # Session persistence (XDG config dir, via mitid-client)
 ├── screens/                # Textual screens (accounts, holdings, etc.)
 ├── services/               # Business logic (price history, charts)
 ├── styles/                 # Textual CSS

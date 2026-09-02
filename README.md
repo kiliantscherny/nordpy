@@ -47,7 +47,16 @@
 nordpy authenticates with Nordnet through the same MitID flow your browser uses – it simply performs the login via Nordnet's API directly from the terminal, rather than through a web page. Once authenticated, it fetches your portfolio data using Nordnet's standard API endpoints.
 
 > [!IMPORTANT]
-> **Privacy** – nordpy does **not** collect, transmit, or store any of your personal information. Your credentials are sent directly to MitID and Nordnet – never to any third-party server. Session cookies are saved locally on your machine (with `0600` permissions) solely to avoid repeated logins. No telemetry, analytics, or external services are involved.
+> **Privacy** – nordpy does **not** collect, transmit, or store any of your personal information. Your credentials are sent directly to MitID and Nordnet – never to any third-party server. No telemetry, analytics, or external services are involved.
+>
+> Session cookies are saved locally, `0600`, solely to avoid repeated logins:
+>
+> | | where |
+> | --- | --- |
+> | session | `$XDG_CONFIG_HOME/nordpy/nordnet-session.json`, or `~/.config/nordpy/…` |
+> | log | `$XDG_STATE_HOME/nordpy/nordpy.log`, or `~/.local/state/nordpy/…` |
+>
+> Both are the same place on every run. `nordpy --logout` deletes the session.
 
 ### Quickstart
 
@@ -100,17 +109,24 @@ uvx --python 3.13 nordpy --user <your-mitid-username>
 
 ## Installation
 
-### With uv
+nordpy is a command-line tool, not a library. There is nothing here worth
+importing, so the way to run it is the way you run any other tool:
 
 ```bash
-uv add nordpy
+uvx nordpy --user <your-mitid-username>
 ```
 
-### With pip
+That fetches it, runs it, and leaves nothing behind. If you use it often:
 
 ```bash
-pip install nordpy
+uv tool install nordpy        # or: pipx install nordpy
+nordpy --user <your-mitid-username>
 ```
+
+> [!TIP]
+> `uv add nordpy` would work, but it is not what this is for. Adding a TUI that
+> logs you in with MitID to a project's dependencies buys you nothing and ties
+> that project to everything nordpy pulls in.
 
 ## Usage
 
@@ -122,7 +138,7 @@ nordpy --user <your-mitid-username>
 # Force re-authentication (ignore saved session)
 nordpy --user <your-mitid-username> --force-login
 
-# Verbose logging (debug output to stderr + nordpy.log)
+# Verbose logging (debug output to stderr, and the log path printed)
 nordpy --user <your-mitid-username> --verbose
 
 # Delete saved session and exit

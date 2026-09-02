@@ -1,5 +1,6 @@
 # Session & exports
 .nordnet_session.json
+nordpy.log
 exports/
 
 # Logs
