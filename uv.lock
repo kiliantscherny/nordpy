@@ -973,6 +973,21 @@ wheels = [
 ]
 
 [[package]]
+name = "mitid-client"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "pycryptodome" },
+    { name = "qrcode" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/13/17/4de9db9acfb9fe4d6c94dd8873bab93310f62308494c3da806867d2eeb98/mitid_client-0.1.2.tar.gz", hash = "sha256:bc1b520b452b2d4280276a3883ff9f4257743e72c56a62a3fe301266a91a0883", size = 25795, upload-time = "2026-09-02T20:55:19.515Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7a/f7/af02bf8c1d4ef57d525828327cfec2274ecece553bedea43a5a22eab4780/mitid_client-0.1.2-py3-none-any.whl", hash = "sha256:d23e6d0686e4f69dc8ed74907a88acad3e9bd9b13a4e8b706711dbdcb620bf13", size = 29572, upload-time = "2026-09-02T20:55:18.196Z" },
+]
+
+[[package]]
 name = "msgpack"
 version = "1.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1133,6 +1148,7 @@ dependencies = [
     { name = "duckdb" },
     { name = "loguru" },
     { name = "lxml" },
+    { name = "mitid-client" },
     { name = "openpyxl" },
     { name = "pycryptodome" },
     { name = "pydantic" },
@@ -1165,6 +1181,7 @@ requires-dist = [
     { name = "duckdb", specifier = ">=1.2.0" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "lxml", specifier = ">=6.0.2" },
+    { name = "mitid-client", specifier = ">=0.1.2" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pycryptodome", specifier = ">=3.23.0" },
     { name = "pydantic", specifier = ">=2.11.0" },
