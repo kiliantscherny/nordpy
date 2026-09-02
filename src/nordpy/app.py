@@ -166,13 +166,14 @@ class NordpyApp(App):
 
 
 def _configure_logging(verbose: bool = False) -> None:
-    """Set up loguru to write to nordpy.log (and stderr if verbose)."""
-    from pathlib import Path
+    """Set up loguru to write to the log file (and stderr if verbose)."""
+    from nordpy.session import log_path as _log_path
 
-    log_path = Path(__file__).resolve().parent.parent.parent / "nordpy.log"
+    path = _log_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
     logger.remove()  # Remove default stderr handler
     logger.add(
-        str(log_path),
+        str(path),
         rotation="5 MB",
         retention="3 days",
         level="DEBUG",
@@ -180,9 +181,10 @@ def _configure_logging(verbose: bool = False) -> None:
     )
     if verbose:
         logger.add(sys.stderr, level="DEBUG")
-    logger.info("nordpy started — logging to {}", log_path)
-    # Also print so the user can find it even if Textual swallows stderr
-    print(f"[nordpy] Log file: {log_path}")
+        # Only with --verbose. Printing a path before the TUI paints is noise
+        # for anyone who did not ask where the log went.
+        print(f"[nordpy] Log file: {path}")
+    logger.info("nordpy started — logging to {}", path)
 
 
 class _ColorHelpFormatter(argparse.HelpFormatter):
@@ -293,8 +295,7 @@ def main() -> None:
     if args.logout:
         from nordpy.session import SessionManager
         sm = SessionManager()
-        if sm.session_path.exists():
-            sm.session_path.unlink()
+        if sm.forget():
             console.print("[success]Session file removed.[/success]")
         else:
             console.print("[dim]No saved session found.[/dim]")
