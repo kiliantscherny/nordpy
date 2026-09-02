@@ -116,7 +116,11 @@ class AuthScreen(Screen[HttpSession | None]):
             def _show_cpr_input() -> None:
                 cpr_group = self.query_one("#cpr-group")
                 cpr_group.display = True
-                self.query_one("#cpr-input", Input).focus()
+                field = self.query_one("#cpr-input", Input)
+                # The same box collects a CPR number and, with the code-token
+                # method, six digits from the token. Say which is wanted.
+                field.placeholder = prompt
+                field.focus()
 
             self.app.call_from_thread(_show_cpr_input)
             self._input_event.wait()
@@ -192,7 +196,7 @@ class AuthScreen(Screen[HttpSession | None]):
 
         arg = exc.args[0] if exc.args else exc
 
-        # BrowserClient raises Exception(dict) or Exception(bytes)
+        # The MitID protocol raises Exception(dict) or Exception(bytes)
         if isinstance(arg, dict):
             data = arg
         elif isinstance(arg, bytes):

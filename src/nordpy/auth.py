@@ -1,4 +1,4 @@
-"""AuthManager — wraps BrowserClient for TUI integration."""
+"""AuthManager — drives the Nordnet/Signicat login, MitID via mitid-client."""
 
 from __future__ import annotations
 
@@ -14,7 +14,8 @@ import requests
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
-from nordpy.BrowserClient.Helpers import get_authentication_code
+import mitid
+
 from nordpy.http import HttpSession
 from nordpy.session import SessionManager
 
@@ -231,8 +232,9 @@ class AuthManager:
     ) -> None:
         """Perform full MitID login flow.
 
-        Follows the helmstedt/MitID-BrowserClient reference implementation
-        as closely as possible, with the addition of CPR verification handling.
+        Nordnet's own half of it: the Signicat authorize URL, the aux blob it
+        hands back, and the CPR verification afterwards. The MitID half in the
+        middle is mitid-client's, and is the same protocol wherever it is used.
         """
         _status = on_status or (lambda msg: None)
         _input = on_input_needed or input
@@ -399,8 +401,18 @@ class AuthManager:
         aux = json.loads(base64.b64decode(request.json()["aux"]))
         _status("Waiting for MitID authentication...")
         logger.info("Step 4: MitID authentication (method={})", method)
-        authorization_code = get_authentication_code(
-            session, aux, method, user_id, password, on_qr_display=on_qr_display
+        authorization_code = mitid.authenticate(
+            session,
+            aux,
+            user_id,
+            method=method,
+            password=password,
+            # The old vendored copy called input() for these, which in a TUI
+            # would have blocked the event loop forever. Both now come back
+            # through the screen that asked for them.
+            ask_token_code=_input,
+            on_status=_status,
+            on_qr=on_qr_display,
         )
         logger.info("Step 4 complete: got authorization_code (len={})", len(str(authorization_code)))
         _status("MitID authentication successful")
