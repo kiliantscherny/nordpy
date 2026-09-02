@@ -25,6 +25,16 @@
 - **Major-developments-in-the-app-including-creation-of-a-TUI-for-accessing-Nordnet-data,-unit-testing,-and-Pydantic-validation-of-API-responses**: create tui for nordpy
 - initial commit
 
+## v1.4.0 (2026-09-02)
+
+### Fix
+
+- **session**: keep the session in the config dir, not the working directory
+
+### Refactor
+
+- **auth**: use mitid-client instead of a vendored copy of the protocol
+
 ## v1.3.0 (2026-05-17)
 
 ### Feat
