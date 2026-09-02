@@ -1,5 +1,7 @@
 [lint]
-exclude = ["src/nordpy/BrowserClient/*"]
-
-[format]
-exclude = ["src/nordpy/BrowserClient/*"]
+# Named explicitly rather than left to ruff's defaults. Those defaults grow
+# between releases - 0.16 widened them enough to fail a repository that had
+# not changed - so an unpinned ruff would turn an unrelated push red. This is
+# the set nordpy has always effectively been linted against; widening it is a
+# deliberate job, not something a version bump should decide.
+select = ["E4", "E7", "E9", "F"]
